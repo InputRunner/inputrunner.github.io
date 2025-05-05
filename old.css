@@ -1,0 +1,59 @@
+body {
+  font-family: monospace;
+  background: #222;
+  color: #0f0;
+  margin: 0;
+  padding: 20px;
+  line-height: 1.6;
+}
+
+.input-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 10px;
+}
+
+.input-item {
+  background: #111;
+  border: 1px solid #0f0;
+  padding: 10px;
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.input-item:hover, .input-item.active {
+  background: #0f0;
+  color: #000;
+}
+
+.player-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.player-modal video {
+  max-width: 90%;
+  max-height: 90%;
+}
+
+#controls {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.add-input {
+  background: #111;
+  border: 1px solid #0f0;
+  color: #0f0;
+  padding: 10px;
+  margin: 10px 0;
+}
+
