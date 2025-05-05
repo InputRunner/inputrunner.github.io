@@ -9,10 +9,10 @@ import {
 
 // --- Channel "scanning" simulation (demo) ---
 const FAKE_CHANNELS = [
-  { id: 1, name: "BBC One", freq: "482 MHz", size: 1, position: 1, stdName: "BBC One" },
-  { id: 2, name: "CNN", freq: "506 MHz", size: 1, position: 2, stdName: "CNN" },
-  { id: 3, name: "Discovery", freq: "530 MHz", size: 1, position: 3, stdName: "Discovery" },
-  { id: 4, name: "Animal Planet", freq: "554 MHz", size: 1, position: 4, stdName: "Animal Planet" }
+  { id: 1, name: "Example 1", freq: "482 MHz", size: 1, position: 1, stdName: "test1" },
+  { id: 2, name: "Example 2", freq: "506 MHz", size: 1, position: 2, stdName: "test2" },
+  { id: 3, name: "Example 3", freq: "530 MHz", size: 1, position: 3, stdName: "test3" },
+  { id: 4, name: "Exampls 4", freq: "554 MHz", size: 1, position: 4, stdName: "test4" }
 ];
 
 function AddInputModal({ onAdd, onClose }) {
