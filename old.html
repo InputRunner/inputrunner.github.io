@@ -2,167 +2,24 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Input Runner - Classic</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-    body {
-      font-family: monospace;
-      background: linear-gradient(120deg, #222 0%, #333 50%, #444 100%);
-      color: #0f0;
-      margin: 0;
-      padding: 20px;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      line-height: 1.6;
-      animation: movingBg 12s linear infinite;
-    }
-
-    @keyframes movingBg {
-      0% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-      100% { background-position: 0% 50%; }
-    }
-
-    .add-section {
-      display: flex;
-      justify-content: center;
-      margin: 20px 0;
-    }
-
-    .add-section input {
-      background: #111;
-      border: 1px solid #0f0;
-      color: #0f0;
-      padding: 10px;
-      width: 200px;
-    }
-
-    .input-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-      gap: 10px;
-      max-width: 800px;
-      margin: 0 auto;
-    }
-
-    .input-item {
-      background: #111;
-      border: 1px solid #0f0;
-      padding: 10px;
-      text-align: center;
-      cursor: pointer;
-    }
-
-    .input-item:hover, .input-item.active {
-      background: #0f0;
-      color: #000;
-    }
-
-    .custom-inputs {
-      margin-top: 20px;
-      text-align: center;
-    }
-
-    .player-modal {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.9);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 100;
-    }
-
-    .player-modal video {
-      max-width: 90%;
-      max-height: 90%;
-    }
-  </style>
+  <title>Input Runner</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="old.css">
 </head>
 <body>
-  <div id="app"></div>
-  
-  <script type="module">
-    import { h, render } from "https://cdn.jsdelivr.net/npm/preact@10.20.1/dist/preact.module.js";
-    import htm from "https://cdn.jsdelivr.net/npm/htm@3.1.1/dist/htm.module.js";
-    const html = htm.bind(h);
-    import { useState } from "https://cdn.jsdelivr.net/npm/preact@10.20.1/hooks/dist/hooks.module.js";
+  <h1>Input Runner</h1>
 
-    function App() {
-      const [inputs, setInputs] = useState([]);
-      const [selectedInput, setSelectedInput] = useState(null);
+  <div id="inputContainer" class="input-grid"></div>
 
-      const INPUT_SOURCES = [
-        { id: "hdmi1", name: "HDMI 1", src: "ext://hdmi:1" },
-        { id: "hdmi2", name: "HDMI 2", src: "ext://hdmi:2" },
-        { id: "av1", name: "AV 1", src: "ext://av:1" },
-        { id: "av2", name: "AV 2", src: "ext://av:2" },
-        { id: "comp1", name: "COMP 1", src: "ext://comp:1" },
-        { id: "scart1", name: "SCART 1", src: "ext://scart:1" },
-        { id: "tv1", name: "Live TV 1", src: "atv://cable:1/dvb/1" },
-        { id: "tv2", name: "Live TV 2", src: "atv://cable:2/dvb/2" }
-      ];
+  <div id="controls">
+    <button class="add-input">Add Input</button>
+  </div>
 
-      return html`
-        <div>
-          <div class="add-section">
-            <input 
-              type="text" 
-              onKeyDown=${e => {
-                if (e.key === 'Enter') {
-                  const name = e.target.value.trim();
-                  if (name) {
-                    setInputs([...inputs, name]);
-                    e.target.value = '';
-                  }
-                }
-              }}
-              placeholder="Add Input"
-            />
-          </div>
+  <div id="playerModal" class="player-modal" style="display: none;">
+    <video id="playerVideo" controls autoplay></video>
+  </div>
 
-          <div class="input-grid">
-            ${INPUT_SOURCES.map(input => html`
-              <div 
-                key=${input.id}
-                class=${"input-item" + (selectedInput === input ? " active" : "")}
-                onClick=${() => setSelectedInput(input)}
-              >
-                ${input.name}
-              </div>
-            `)}
-          </div>
-
-          <div class="custom-inputs">
-            ${inputs.map((input, index) => html`
-              <div key=${index}>${input}</div>
-            `)}
-          </div>
-
-          ${selectedInput && html`
-            <div class="player-modal" onClick=${() => setSelectedInput(null)}>
-              <video 
-                autoplay 
-                controls
-                onKeyDown=${e => {
-                  if (e.key === 'Backspace' || e.key === 'Escape') {
-                    setSelectedInput(null);
-                  }
-                }}
-              >
-                <source src=${selectedInput.src} type="service/webos-external"/>
-              </video>
-            </div>
-          `}
-        </div>
-      `;
-    }
-
-    render(html`<${App}/>`, document.getElementById("app"));
-  </script>
+  <!-- Move script to bottom for guaranteed load -->
+  <script src="old.js"></script>
 </body>
 </html>
