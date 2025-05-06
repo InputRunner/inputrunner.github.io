@@ -1,22 +1,292 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <meta charset="UTF-8">
   <title>Input Runner (Classic 2018)</title>
   <meta name="viewport" content="width=540">
-  <link rel="stylesheet" href="simple_style.css">
-  <script type="importmap">
-    {
-      "imports": {
-        "htm": "https://cdn.jsdelivr.net/npm/htm@3.1.1/dist/htm.module.js",
-        "preact": "https://cdn.jsdelivr.net/npm/preact@10.20.1/dist/preact.module.js"
-      }
+  <style>
+    body { background: #222; color: #bfffb2; font-family: sans-serif; margin:0; min-height:100vh;}
+    .top-bar { text-align: right; padding: 10px 12px 4px 0;}
+    .input-row { display: flex; justify-content: center; flex-wrap:wrap; gap:12px; margin:34px 0 18px 0;}
+    .input-btn {
+      width: 78px; height: 78px; margin:4px; border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      background: #232; color: #bfffb2; border:2px solid #232; font-size:1.02em; font-weight:bold;
+      cursor:pointer; transition:.14s;
     }
-  </script>
+    .input-btn.selected, .input-btn:focus {
+      background: #98fc66; color:#163215;
+      border: 2px solid #98fc66;
+    }
+    .input-btn:hover { border:2px solid #7cf58a; }
+    .input-list { margin: 10px auto 0 auto; max-width:242px;}
+    .input-extra { background:#232; color:#fff; border-radius:7px; padding:6px 13px; margin:3px 0; }
+    .modal-bg {
+      position:fixed; inset:0; z-index:10;
+      background:rgba(16,24,14,0.93);
+      display:flex; align-items:center; justify-content:center;
+    }
+    .modal-box { background:#141e13; border-radius:12px; padding:19px 23px;}
+    .modal-box video { width:53vw; height:46vh; background:#000; border-radius:7px; }
+    .close-tip { color:#cfc; margin-top:8px; font-size:.96em; }
+    .settings-modal {
+      position:fixed; inset:0; z-index:11;
+      background:rgba(25,28,25,.93); display:flex; align-items:center; justify-content:center;
+    }
+    .settings-box {
+      background:#161e16; border-radius: 8px; color:#8fca91;
+      padding:16px 19px; min-width:220px; font-size:.99em;
+    }
+    .settings-header { display:flex;justify-content:space-between;align-items:center;font-size:1.12em;}
+    .settings-close { background:none;border:none;color:#cff;padding:0 7px;cursor:pointer;font-size:1.5em; }
+    .settings-close:hover { color:#faa; }
+    .settings-tabs { margin:14px 0 8px 0; }
+    .settings-tabs button {
+      background:#242; color:#cf9; border:none;padding:4px 11px;font-size:.98em;
+      border-radius:6px 6px 0 0;cursor:pointer;
+    }
+    .settings-tabs .active{ background:#98fc66;color:#112; }
+    .scan-btn {background:#4fae4d;color:#191;border:none;padding:5px 13px;border-radius:6px;cursor:pointer;}
+    .scan-btn:hover {background:#98fc66;}
+    .channels-table{width:100%;border-collapse:collapse;font-size:.97em;}
+    .channels-table th,.channels-table td{border-bottom:1px solid #263a26;padding:3px 7px;}
+    .channels-table th{background:#232;color:#d0ffd7;}
+    .editable {cursor:pointer;border-bottom:1px dashed #7cee7cee;}
+    .editable:hover {color:#fffcc5;background:#7cfc7c18;}
+    input[type="text"], input[type="number"] {
+      border:1px solid #afd6b0; background:#eaffed; border-radius:4px; color:#191; font-size:1em; padding: 2px 5px;
+    }
+    @media (max-width:650px){
+      .input-row{gap:6px;}
+      .input-btn{width:58px;height:58px;font-size:.93em;}
+      .modal-box video{width:91vw;height:29vh;}
+      .settings-box{min-width: 30vw;padding: 5vw 2vw;}
+    }
+  </style>
 </head>
 <body>
   <div id="app"></div>
-  <script type="module" src="simple_main.js"></script>
+  <script type="module">
+    // Simple 2008-like layout and code
+    const INPUTS = [
+      {key:"hdmi1",label:"HDMI 1",type:"hdmi",src:"ext://hdmi:1"},
+      {key:"hdmi2",label:"HDMI 2",type:"hdmi",src:"ext://hdmi:2"},
+      {key:"hdmi3",label:"HDMI 3",type:"hdmi",src:"ext://hdmi:3"},
+      {key:"hdmi4",label:"HDMI 4",type:"hdmi",src:"ext://hdmi:4"},
+      {key:"av1",label:"AV 1",type:"av",src:"ext://av:1"},
+      {key:"av2",label:"AV 2",type:"av",src:"ext://av:2"},
+      {key:"comp1",label:"Component 1",type:"comp",src:"ext://comp:1"},
+      {key:"scart1",label:"SCART 1",type:"scart",src:"ext://scart:1"},
+      {key:"livetv1",label:"Live TV 1",type:"livetv",src:"atv://cable:1/dvb/1"},
+      {key:"livetv2",label:"Live TV 2",type:"livetv",src:"atv://cable:2/dvb/2"}
+    ];
+    const CHANNELS_FAKE = [
+      {id:1, name:"BBC One", freq:"482 MHz", size:1, position:1, stdName:"BBC One"},
+      {id:2, name:"CNN", freq:"506 MHz", size:1, position:2, stdName:"CNN"},
+      {id:3, name:"Discovery", freq:"530 MHz", size:1, position:3, stdName:"Discovery"},
+      {id:4, name:"Animal Planet", freq:"554 MHz", size:1, position:4, stdName:"Animal Planet"}
+    ];
+    const $ = s=>document.querySelector(s);
+
+    let state = {
+      selected:0, showPlayer:false, playerIdx:0,
+      userInputs:[],
+      playerSize:1,
+      showSettings: false,
+      tab:"scan",
+      scannedChannels:[],
+      channels:[],
+      renamingId:null, renameVal:"", renameField:null
+    };
+
+    function render() {
+      let inpBtns = INPUTS.map((inp,i) => `
+        <div class="input-btn${state.selected===i&&!state.showPlayer?" selected":""}"
+            tabindex="0"
+            onclick="app.pickInput(${i})"
+            ${state.selected===i&&!state.showPlayer?'autofocus':''}
+        >${inp.label}</div>`
+      ).join('');
+      let extras = state.userInputs.map(t=>`<div class="input-extra">${t}</div>`).join('');
+      let player = '';
+      if(state.showPlayer) {
+        let src = INPUTS[state.playerIdx].src;
+        let nm  = INPUTS[state.playerIdx].label;
+        let sz = state.playerSize;
+        let w = sz===1?'53vw':sz===2?'71vw':'97vw'
+        let h = sz===1?'46vh':sz===2?'67vh':'85vh'
+        player = `
+        <div class="modal-bg" onclick="app.closePlayer(event)">
+          <div class="modal-box" onclick="event.stopPropagation()">
+            <div style="color:#9ef;font-size:1.13em;margin-bottom:8px">${nm}</div>
+            <video id="vidp" style="width:${w};height:${h};" autoplay controls>
+              <source src="${src}" type="service/webos-external"/>
+            </video>
+            <div class="close-tip">
+              (Backspace, Esc or BACK to exit &mdash; PageUp/PageDown resize)
+            </div>
+          </div>
+        </div>`;
+      }
+      let settings = '';
+      if(state.showSettings) {
+        settings = `<div class="settings-modal" onclick="app.hideSettings(event)">
+          <div class="settings-box" onclick="event.stopPropagation()">
+            <div class="settings-header">
+              Settings <button class="settings-close" onclick="app.hideSettings(event);">&times;</button>
+            </div>
+            <div class="settings-tabs">
+              <button class="${state.tab==='scan'?'active':''}" onclick="app.switchTab('scan')">Scan</button>
+              <button class="${state.tab==='broadcast'?'active':''}" onclick="app.switchTab('broadcast')">Broadcast</button>
+            </div>
+            <div>
+              ${state.tab==='scan'?
+                `<div style="text-align:center;">
+                  <div style="margin-bottom:9px;">Scan for Live TV channels.</div>
+                  <button class="scan-btn" onclick="app.scanChannels()">Scan Channels</button>
+                  <div style="margin-top:8px;">
+                    ${!state.scannedChannels.length?'<div style="color:#83e591;">No channels scanned yet.</div>':
+                      '<ul style="padding-left:17px;">'+
+                        state.scannedChannels.map(ch=>`<li>${ch.name} <span style="color:#7ac">(${ch.freq})</span></li>`).join('')
+                      +'</ul>'
+                    }
+                  </div>
+                </div>`
+              :`
+                <div><b>Arrange Channels</b></div>
+                <div class="channels-editor-list" style="margin-top:7px;">
+                  ${!state.channels.length?'<div style="color:#83e591;">No channels yet. <span style="font-size:.98em;">(Scan first)</span></div>':
+                    `<table class="channels-table"><thead>
+                      <tr>
+                        <th>Pos</th><th>Name</th><th>Freq</th><th>Size</th><th>Std Name</th>
+                      </tr></thead>
+                      <tbody>
+                        ${state.channels.map(ch=>`
+                        <tr>
+                          <td>${editField(ch,"position")}</td>
+                          <td>${editField(ch,"name")}</td>
+                          <td><span style="color:#7ac">${ch.freq}</span></td>
+                          <td>${editField(ch,"size")}</td>
+                          <td>${editField(ch,"stdName")}</td>
+                        </tr>`).join('')}
+                      </tbody>
+                    </table>`
+                  }
+                </div>
+              `}
+            </div>
+          </div>
+        </div>`;
+      }
+      $('#app').innerHTML = `
+        <div>
+          <div class="top-bar">
+            <button class="scan-btn" onclick="app.showSettings()" style="margin-right:3px;">&#9881;</button>
+          </div>
+          <div class="input-row">${inpBtns}</div>
+          <div class="input-list">${extras}</div>
+          <div style="margin:12px 0 0 0;">
+            <input id="inpadd" style="background:#151d17;border:1px solid #5eff7c;border-radius:5px;color:#afffa9;padding:7px 8px;width:135px;font-size:.99em;"
+              type="text" placeholder="Add Input..." onkeydown="app.addInput(event)">
+          </div>
+        </div>
+        ${player}
+        ${settings}
+      `;
+    }
+
+    function editField(ch, field) {
+      if(state.renamingId === ch.id && state.renameField === field) {
+        return `<input type="${field==='size'||field==='position'?'number':'text'}" min="1"
+          style="width: ${field==='stdName'?'80px':'45px'};"
+          value="${state.renameVal}" 
+          oninput="app.renameValChange(event)" 
+          onblur="app.commitRename(${ch.id},'${field}')" 
+          onkeydown="event.key==='Enter'&&app.commitRename(${ch.id},'${field}')"
+          autofocus
+        />`;
+      }
+      return `<span class="editable" onclick="app.startRename(${ch.id},'${field}')">${ch[field]}</span>`;
+    }
+
+    window.app = {
+      pickInput(idx) {
+        state.selected = idx;
+        state.playerIdx = idx;
+        state.showPlayer = true;
+        state.playerSize = 1;
+        render();
+        setTimeout(()=>{
+          let v = $("#vidp");
+          if(v) v.focus && v.focus();
+        },70);
+      },
+      closePlayer(e) {
+        if(e && e.target!==e.currentTarget) return;
+        state.showPlayer = false; render();
+      },
+      addInput(e) {
+        if(e.key==='Enter') {
+          let v = e.target.value.trim();
+          if(v) { state.userInputs.push(v); render(); }
+          e.target.value = '';
+        }
+      },
+      showSettings() { state.showSettings = true; state.tab="scan"; render(); },
+      hideSettings(e) { state.showSettings = false; state.renamingId=null; render(); },
+      switchTab(tab) { state.tab=tab; render(); },
+      scanChannels() {
+        setTimeout(()=>{
+          state.scannedChannels = JSON.parse(JSON.stringify(CHANNELS_FAKE));
+          state.channels = JSON.parse(JSON.stringify(CHANNELS_FAKE));
+          render();
+        }, 500);
+      },
+      startRename(id, field) {
+        state.renamingId=id; state.renameField=field;
+        let ch = state.channels.find(c=>c.id===id);
+        state.renameVal = ch[field];
+        render();
+        setTimeout(()=>{
+          let input = document.querySelector('input[autofocus]');
+          input && input.focus && input.focus();
+        },20);
+      },
+      renameValChange(e) { state.renameVal = e.target.value; },
+      commitRename(id, field) {
+        state.channels = state.channels.map(ch=>
+          ch.id===id?{...ch,[field]:field==="size"||field==="position"?Number(state.renameVal):state.renameVal}:ch
+        );
+        state.renamingId=null; state.renameField=null; state.renameVal="";
+        render();
+      }
+    };
+
+    // Keyboard navigation (also for TV remotes)
+    document.addEventListener('keydown', (e)=>{
+      if(state.showPlayer) {
+        if(["Backspace","Escape"].includes(e.key) || e.keyCode===461 || e.keyCode===412 || e.key==="VK_BACK" || e.key==="BACK") {
+          state.showPlayer=false; render(); e.preventDefault();
+        } else if(e.key==="PageUp" || e.keyCode===33) {
+          state.playerSize = Math.min(state.playerSize+1, 3); render(); e.preventDefault();
+        } else if(e.key==="PageDown" || e.keyCode===34) {
+          state.playerSize = Math.max(state.playerSize-1, 1); render(); e.preventDefault();
+        }
+      } else if(state.showSettings) {
+        // ignore
+      } else if(document.activeElement.tagName==="INPUT" || document.activeElement.tagName==="TEXTAREA") {
+        // ignore input
+      } else {
+        let L=INPUTS.length;
+        if(e.key==="ArrowLeft")      {state.selected=(state.selected-1+L)%L; render(); e.preventDefault();}
+        else if(e.key==="ArrowRight"){state.selected=(state.selected+1)%L; render(); e.preventDefault();}
+        else if(e.key==="Enter"){
+          app.pickInput(state.selected); e.preventDefault();
+        }
+      }
+    });
+
+    render();
+  </script>
 </body>
 </html>
-
