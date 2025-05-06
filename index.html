@@ -12,6 +12,18 @@
       }
     }
   </script>
+
+<script>
+  (function() {
+    var ua = navigator.userAgent;
+    var targetUA = "Mozilla/5.0 (WebOS; Linux/SmartTV) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53,0.2785,34 Safari/537.36 WebAppManager";
+    
+    if (ua === targetUA) {
+      window.location.href = "https://inputrunner.github.io/simple_index.html";
+    }
+  })();
+</script>
+  
 </head>
 <body>
   <div id="app"></div>
