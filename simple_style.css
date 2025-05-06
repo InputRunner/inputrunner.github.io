@@ -1,0 +1,228 @@
+body {
+  font-family: Segoe UI, Arial, sans-serif;
+  background: #18191c;
+  color: #ccffcc;
+  margin: 0;
+  min-height: 100vh;
+}
+#top-bar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  background: #232d2b;
+  min-height: 44px;
+  padding: 0 18px;
+}
+#settings-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 21px;
+  color: #8dffa9;
+  margin-left: 8px;
+}
+#settings-btn:hover { color: #8ffe6d; }
+#main-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 28px;
+}
+.hdmi-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  justify-content: center;
+  margin-bottom: 11px;
+}
+.hdmi-card {
+  width: 92px;
+  height: 92px;
+  background: #232d2b;
+  border: 2.5px solid #304a32;
+  border-radius: 13px;
+  box-shadow: 0 1px 6px #0006;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.04em;
+  transition: border .13s;
+}
+.hdmi-card.selected {
+  border: 2.5px solid #38df5c;
+  background: #253a28;
+}
+.hdmi-label {
+  font-size: 1.04em;
+  color: #9ee49c;
+  margin-bottom: 5px;
+}
+.hdmi-num {
+  font-size: 1.9em;
+  background: #181d15;
+  color: #b9eebc;
+  border-radius: 7px;
+  padding: 1px 12px;
+}
+#input-list {
+  margin-top: 16px;
+  min-height: 24px;
+  font-size: 1em;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.input-item {
+  background: #232d2b;
+  border-radius: 5px;
+  padding: 4px 14px;
+  color: #eeffee;
+  max-width: 241px;
+  font-size: .99em;
+}
+.hdmi-player-modal {
+  position: fixed;
+  inset: 0;
+  background: #232d2be6;
+  z-index: 99;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.hdmi-player-header {
+  font-size: 1.19em;
+  color: #89ec89;
+  margin-bottom: 9px;
+}
+.hdmi-video-wrap video {
+  width: 52vw;
+  height: 52vh;
+  background: #111;
+  border-radius: 8px;
+  box-shadow: 0 2px 18px #080b;
+  margin-bottom: 7px;
+}
+#hdmi-close-tip {
+  color: #a6f1a6;
+  margin: 10px 0 0 0;
+  font-size: .99em;
+  font-style: italic;
+  text-align: center;
+}
+.settings-modal {
+  position:fixed; inset:0;
+  background:#232d2bcc;
+  z-index:111;
+  display:flex;
+  align-items:center;
+  justify-content: center;
+}
+.settings-content {
+  background: #181d15;
+  border-radius: 12px;
+  color: #b9eebc;
+  min-width: 290px;
+  padding: 15px 21px 21px 21px;
+  font-size: .99em;
+}
+.settings-header {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font-size:1.09em;
+  color:#38df5c;
+  font-weight:bold;
+  margin-bottom:8px;
+}
+.settings-close-btn {
+  background:none;
+  border:none;
+  color: #d6ffd6;
+  font-size:1.5em;
+  cursor:pointer;
+}
+.settings-close-btn:hover {
+  color: #faa;
+}
+.settings-tabs {
+  display: flex;
+  gap: 7px;
+  margin-bottom: 11px;
+}
+.settings-tabs button {
+  background: #283129;
+  border: none;
+  color: #83e591;
+  padding: 3px 13px;
+  border-radius: 6px 6px 0 0;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: .99em;
+}
+.settings-tabs .active {
+  background: #89ec89;
+  color: #181918;
+}
+.settings-body {
+  background: #232d2b;
+  border-radius: 0 0 7px 7px;
+  padding: 12px 4px 12px 4px;
+  min-height: 75px;
+}
+.scan-btn {
+  background: #43df74;
+  border: none;
+  color: #101910;
+  padding: 5px 18px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.scan-btn:hover {
+  background: #a4ffb0;
+}
+.channels-editor-list {
+  margin-top: 4px;
+}
+.channels-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 1em;
+}
+.channels-table th,
+.channels-table td {
+  border-bottom: 1px solid #405442;
+  padding: 3px 6px;
+}
+.channels-table th {
+  background: #273829;
+  color: #b4f8c5;
+}
+.editable {
+  cursor: pointer;
+  border-bottom: 1px dashed #38df5c;
+}
+.editable:hover {
+  color: #fff;
+  background: #38df5c21;
+}
+.settings-modal input[type="text"],
+.settings-modal input[type="number"] {
+  border: 1.2px solid #38df5c;
+  border-radius: 4px;
+  padding: 2px 5px;
+  font-size: 1em;
+  color: #181d15;
+  background: #eaffef;
+}
+@media (max-width:600px) {
+  .hdmi-list { gap: 7px; }
+  .hdmi-card { width: 70px; height:70px; font-size:.97em; }
+  .hdmi-num { font-size: 1.3em;}
+  .hdmi-player-modal .hdmi-video-wrap video { width:90vw; height:32vh;}
+  .settings-content {min-width:10vw;width:95vw;font-size:.97em;}
+}
