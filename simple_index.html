@@ -2,57 +2,131 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Input Runner (Simple Videos)</title>
+  <title>Input Runner (Simple Player)</title>
   <style>
-    body { background:#111; color:#afa; text-align:center; font-family:Arial,sans-serif; }
-    .player-modal { position:fixed; top:0; left:0; width:100%; height:100%; background:#111f; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:10;}
-    .player-modal video { background:#000; border:3px solid #9fa; border-radius:8px; }
-    .input-list { display:flex; flex-wrap:wrap; justify-content:center; gap:16px; margin-top:24px;}
-    .input-btn { background:#222; color:#afa; border:2px solid #444; border-radius:7px; padding:18px 24px; margin:6px; font-size:1.2em; cursor:pointer;}
-    .input-btn:hover, .input-btn:focus { border-color:#aeffb9; background:#262; color:#fff; }
-    .label { margin-bottom:6px; }
-    .close-hint { color:#ede; margin:12px 0 0 0; }
+    body { 
+      background: #111; 
+      color: #afa; 
+      font-family: Arial, sans-serif; 
+    }
+    .row { 
+      margin: 16px 0; 
+    }
+    .input-btn { 
+      background: #222; 
+      color: #afa; 
+      border: 1px solid #333; 
+      border-radius: 2px; 
+      padding: 12px 14px; 
+      margin: 2px; 
+      cursor: pointer; 
+    }
+    .input-btn.active, .input-btn:focus { 
+      background: #0b0; 
+      color: #111; 
+      border-color: #7f7; 
+      outline: none; 
+    }
+    .player-modal { 
+      position: fixed; 
+      top: 0; 
+      left: 0; 
+      width: 100vw; 
+      height: 100vh; 
+      z-index: 999; 
+      background: #000a; 
+      display: flex; 
+      flex-direction: column; 
+      align-items: center; 
+      justify-content: center;
+    }
+    .close-hint { 
+      color: #ddb; 
+      padding: 6px; 
+      font-size: 13px; 
+    }
   </style>
 </head>
 <body>
-  <h2 style="margin-top:18px;">Input Runner (Simple Player)</h2>
-  <div class="input-list" id="inputList">
-    <button class="input-btn" data-src="ext://hdmi:1">HDMI 1</button>
-    <button class="input-btn" data-src="ext://hdmi:2">HDMI 2</button>
-    <button class="input-btn" data-src="ext://hdmi:3">HDMI 3</button>
-    <button class="input-btn" data-src="ext://hdmi:4">HDMI 4</button>
-    <button class="input-btn" data-src="ext://comp:1">Component 1</button>
-    <button class="input-btn" data-src="ext://av:1">AV 1</button>
-    <button class="input-btn" data-src="ext://av:2">AV 2</button>
+  <h2>Input Runner (Simple Player)</h2>
+  <div id="inputList" tabindex="0">
+    <div class="row">
+      <button class="input-btn" data-src="ext://hdmi:1">HDMI 1</button>
+      <button class="input-btn" data-src="ext://hdmi:2">HDMI 2</button>
+      <button class="input-btn" data-src="ext://hdmi:3">HDMI 3</button>
+      <button class="input-btn" data-src="ext://hdmi:4">HDMI 4</button>
+    </div>
+    <div class="row">
+      <button class="input-btn" data-src="ext://comp:1">Component 1</button>
+      <button class="input-btn" data-src="ext://av:1">AV 1</button>
+      <button class="input-btn" data-src="ext://av:2">AV 2</button>
+      <button class="input-btn" data-src="ext://scart:1">SCART 1</button>
+    </div>
+    <div class="row">
+      <button class="input-btn" data-src="atv://cable:1/dvb/1">Live TV 1</button>
+      <button class="input-btn" data-src="atv://cable:2/dvb/2">Live TV 2</button>
+    </div>
   </div>
 
   <div id="playerModal" class="player-modal" style="display:none">
-    <div class="label" id="playerLabel"></div>
-    <video id="playerVideo" autoplay controls style="width:50vw;height:50vh;">
+    <div id="playerLabel"></div>
+    <video id="playerVideo" autoplay controls style="width: 50%; height: 50%;">
       <source id="playerSource" type="service/webos-external">
     </video>
     <div class="close-hint">
-      (Backspace/BACK/Escape = Exit Player)<br>
-      (Page Up/Down = Change Size)
+      (BACKSPACE/BACK/ESC = Exit, Page Up/Down = Size)
     </div>
   </div>
+
+  <!-- Raw video tags requested to be present in HTML -->
+  <video autoplay style="width:50%;height:50%">
+    <source type="service/webos-external" src="ext://scart:1"></source>
+  </video>
+
+  <video autoplay style="width:50%;height:50%">
+    <source type="service/webos-external" src="atv://cable:1/dvb/1"></source>
+  </video>
+
+  <video autoplay style="width:50%;height:50%">
+    <source type="service/webos-external" src="atv://cable:2/dvb/2"></source>
+  </video>
+
   <script>
+    // --- References and setup
     var inputList = document.getElementById('inputList');
     var playerModal = document.getElementById('playerModal');
     var playerVideo = document.getElementById('playerVideo');
     var playerSource = document.getElementById('playerSource');
     var playerLabel = document.getElementById('playerLabel');
-    var currentInputName = "";
+    var inputBtns = Array.prototype.slice.call(document.querySelectorAll('.input-btn'));
+    var focusedIdx = 0;
     var playerSizes = [
-      {w:"32vw", h:"29vh"}, // Smallest
-      {w:"50vw", h:"50vh"}, // Default (1)
-      {w:"80vw", h:"80vh"}, // Largest
+      {w: "32vw", h: "28vh"}, // small
+      {w: "50vw", h: "50vh"}, // normal
+      {w: "80vw", h: "80vh"}, // big
     ];
     var playerSizeIdx = 1;
+    var playerIsOpen = false;
 
-    inputList.onclick = function(e) {
-      var btn = e.target.closest('.input-btn');
-      if(!btn) return;
+    // --- Set initial focus
+    setActiveBtn(0);
+
+    // --- Input selection by arrow keys
+    function setActiveBtn(idx) {
+      inputBtns.forEach(function (btn, i) {
+        if (i === idx) {
+          btn.classList.add("active");
+          btn.focus();
+        } else {
+          btn.classList.remove("active");
+        }
+      });
+      focusedIdx = idx;
+    }
+
+    // --- Enter/Click to play
+    function openPlayer(idx) {
+      var btn = inputBtns[idx];
       var src = btn.getAttribute('data-src');
       var name = btn.textContent;
       playerSource.src = src;
@@ -61,10 +135,37 @@
       playerModal.style.display = "";
       playerSizeIdx = 1;
       setPlayerSize(playerSizeIdx);
-      currentInputName = name;
       playerVideo.focus();
-    };
+      playerIsOpen = true;
+    }
 
+    // --- Keyboard navigation for input select
+    inputList.addEventListener('keydown', function (e) {
+      if (playerIsOpen) return;
+      if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+        var next = (focusedIdx + 1) % inputBtns.length;
+        setActiveBtn(next);
+        e.preventDefault();
+      } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+        var prev = (focusedIdx - 1 + inputBtns.length) % inputBtns.length;
+        setActiveBtn(prev);
+        e.preventDefault();
+      } else if (e.key === "Enter" || e.key === " ") {
+        openPlayer(focusedIdx);
+        e.preventDefault();
+      }
+    });
+
+    // --- Mouse click
+    inputBtns.forEach(function (btn, idx) {
+      btn.addEventListener('click', function () {
+        setActiveBtn(idx);
+        openPlayer(idx);
+      });
+      btn.addEventListener('focus', function () { setActiveBtn(idx); });
+    });
+
+    // --- Player control
     function setPlayerSize(idx) {
       idx = Math.max(0, Math.min(2, idx));
       playerSizeIdx = idx;
@@ -72,48 +173,51 @@
       playerVideo.style.width = sz.w;
       playerVideo.style.height = sz.h;
     }
-
-    // Close modal helper
     function exitPlayer() {
       playerModal.style.display = "none";
       playerVideo.pause();
-      currentInputName = "";
+      playerIsOpen = false;
+      // return focus to list
+      inputList.focus();
+      setActiveBtn(focusedIdx);
     }
-
-    // Key handling for player modal
-    document.addEventListener('keydown', function(e) {
-      if (playerModal.style.display !== "none") {
-        var k = e.key;
+    // Keyboard controls for player
+    document.addEventListener('keydown', function (e) {
+      if (playerIsOpen) {
         if (
-          k === "Backspace" ||
-          k === "Escape" ||
-          k === "VK_BACK" ||
-          k === "BACK" ||
-          e.keyCode === 461 || // LG webOS "BACK"
-          e.keyCode === 412    // Some TV remotes
+          e.key === "Backspace" ||
+          e.key === "Escape" ||
+          e.key === "VK_BACK" ||
+          e.key === "BACK" ||
+          e.keyCode === 461 ||
+          e.keyCode === 412
         ) {
           exitPlayer();
           e.preventDefault();
           return;
         }
-        // Page Up to increase size
-        if (k === "PageUp" || e.keyCode === 33) {
+        if (e.key === "PageUp" || e.keyCode === 33) {
           setPlayerSize(Math.min(playerSizeIdx + 1, 2));
           e.preventDefault();
         }
-        // Page Down to decrease size
-        if (k === "PageDown" || e.keyCode === 34) {
+        if (e.key === "PageDown" || e.keyCode === 34) {
           setPlayerSize(Math.max(playerSizeIdx - 1, 0));
           e.preventDefault();
         }
       }
     });
-
-    // Optional: click outside video closes
-    playerModal.addEventListener('click', function(e) {
+    // Optional: click modal background exits
+    playerModal.addEventListener('click', function (e) {
       if (e.target === playerModal) exitPlayer();
     });
 
+    // For old browsers, ensure inputList can be focused
+    inputList.setAttribute("tabindex", "0");
+    // Focus input list at load
+    window.onload = function () {
+      inputList.focus();
+      setActiveBtn(0);
+    };
   </script>
 </body>
 </html>
