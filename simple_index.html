@@ -45,6 +45,30 @@
       padding: 6px; 
       font-size: 13px; 
     }
+    .record-indicator {
+      color: #e44;
+      font-weight:bold;
+      font-size:21px;
+      margin: 4px 0 6px 0;
+    }
+    .record-btn-ui {
+      background:#300;
+      color:#fff;
+      border:1px solid #e44;
+      padding:7px 15px; margin:9px 7px; border-radius:4px;
+      cursor:pointer; font-weight:bold;
+    }
+    .choose-file-modal {
+      position:fixed;top:0;left:0;width:100vw;height:100vh;background:#000c;z-index:1000;
+      display:flex;align-items:center;justify-content:center;
+    }
+    .chooser-box {
+      background:#222;color:#fff;padding:30px 34px;border-radius:9px;text-align:center;min-width:200px;
+    }
+    .chooser-path-input {
+      padding:6px 13px;font-size:1em;border:1px solid #888;background:#181818;color:#fff;border-radius:5px;
+      margin-bottom:10px;width:75%;
+    }
   </style>
 </head>
 <body>
@@ -70,15 +94,32 @@
 
   <div id="playerModal" class="player-modal" style="display:none">
     <div id="playerLabel"></div>
+    <div id="recordIndicator" class="record-indicator" style="display:none">● REC</div>
     <video id="playerVideo" autoplay controls style="width: 50%; height: 50%;">
       <source id="playerSource" type="service/webos-external">
     </video>
+    <div id="recordBtns" style="margin-top:8px;display:none;">
+      <button type="button" class="record-btn-ui" id="manualStartBtn">● Start Recording</button>
+      <button type="button" class="record-btn-ui" id="manualStopBtn">■ Stop &amp; Save</button>
+    </div>
     <div class="close-hint">
-      (BACKSPACE/BACK/ESC = Exit, Page Up/Down = Size)
+      (BACKSPACE/BACK/ESC = Exit, Page Up/Down = Size, RECORD = Start, STOP = Save)
     </div>
   </div>
 
-  <!-- Raw video tags requested to be present in HTML -->
+  <div id="chooseFileModal" class="choose-file-modal" style="display:none">
+    <form class="chooser-box" id="fileChooserForm" autocomplete="off">
+      <div style="font-size:1.1em;margin-bottom:10px;color:#f3c83d;">
+        Save Recording<br>Enter folder, then a filename (mp4):
+      </div>
+      <input class="chooser-path-input" id="filePathInput" type="text" placeholder="/tmp/rec.mp4" value="/tmp/rec.mp4" autocomplete="off" required>
+      <div style="margin-top:13px;">
+        <button type="submit" class="record-btn-ui" style="background:#253;">Save</button>
+        <button type="button" class="record-btn-ui" style="background:#334;" id="cancelChooserBtn">Cancel</button>
+      </div>
+    </form>
+  </div>
+
   <video autoplay style="width:50%;height:50%">
     <source type="service/webos-external" src="ext://scart:1"></source>
   </video>
@@ -108,10 +149,22 @@
     var playerSizeIdx = 1;
     var playerIsOpen = false;
 
-    // --- Set initial focus
-    setActiveBtn(0);
+    // --- Recording Support ---
+    var isRecording = false;
+    var recorder = null;
+    var recordedChunks = [];
+    var recordingSourceType = "";
+    var recordIndicator = document.getElementById('recordIndicator');
+    var recordBtns = document.getElementById('recordBtns');
+    var isLgWebos = navigator.userAgent.indexOf("WebOS") > -1 || navigator.userAgent.indexOf("webOS") > -1;
+    var chooseFileModal = document.getElementById("chooseFileModal");
+    var fileChooserForm = document.getElementById("fileChooserForm");
+    var filePathInput = document.getElementById("filePathInput");
+    var cancelChooserBtn = document.getElementById("cancelChooserBtn");
 
-    // --- Input selection by arrow keys
+    if (!isLgWebos) { recordBtns.style.display = ""; } else { recordBtns.style.display = "none"; }
+
+    // --- Set initial focus
     function setActiveBtn(idx) {
       inputBtns.forEach(function (btn, i) {
         if (i === idx) {
@@ -124,7 +177,9 @@
       focusedIdx = idx;
     }
 
-    // --- Enter/Click to play
+    setActiveBtn(0);
+
+    // --- Input selection by arrow keys
     function openPlayer(idx) {
       var btn = inputBtns[idx];
       var src = btn.getAttribute('data-src');
@@ -137,9 +192,10 @@
       setPlayerSize(playerSizeIdx);
       playerVideo.focus();
       playerIsOpen = true;
+      stopRecording(true); 
+      recordIndicator.style.display = "none";
     }
 
-    // --- Keyboard navigation for input select
     inputList.addEventListener('keydown', function (e) {
       if (playerIsOpen) return;
       if (e.key === "ArrowRight" || e.key === "ArrowDown") {
@@ -156,7 +212,6 @@
       }
     });
 
-    // --- Mouse click
     inputBtns.forEach(function (btn, idx) {
       btn.addEventListener('click', function () {
         setActiveBtn(idx);
@@ -165,7 +220,6 @@
       btn.addEventListener('focus', function () { setActiveBtn(idx); });
     });
 
-    // --- Player control
     function setPlayerSize(idx) {
       idx = Math.max(0, Math.min(2, idx));
       playerSizeIdx = idx;
@@ -173,15 +227,118 @@
       playerVideo.style.width = sz.w;
       playerVideo.style.height = sz.h;
     }
+
     function exitPlayer() {
       playerModal.style.display = "none";
       playerVideo.pause();
       playerIsOpen = false;
-      // return focus to list
+      stopRecording(true); 
       inputList.focus();
       setActiveBtn(focusedIdx);
+      recordIndicator.style.display = "none";
     }
-    // Keyboard controls for player
+
+    function tryStartWebosRecord() {
+      if (window.webOS && window.webOS.service) {
+        alert("Start recording (webOS API call goes here)");
+        isRecording = true;
+        recordingSourceType = playerSource.src;
+        recordIndicator.style.display = "";
+      } else {
+        alert("Recording is only available on LG webOS TV!");
+      }
+    }
+
+    function tryStopWebosRecordAndSave() {
+      function doSave(filePath) {
+        if (window.webOS && window.webOS.service) {
+          alert("Save recording to: " + filePath + "\n(webOS API call goes here)");
+          isRecording = false;
+          recordIndicator.style.display = "none";
+        } else {
+          alert("Saving is only available on LG webOS TV!");
+        }
+      }
+
+      chooseFileModal.style.display = "";
+      filePathInput.value = "/tmp/rec.mp4";
+      filePathInput.focus();
+      fileChooserForm.onsubmit = function(ev) {
+        ev.preventDefault();
+        var path = filePathInput.value || "/tmp/rec.mp4";
+        doSave(path);
+        chooseFileModal.style.display = "none";
+        return false;
+      };
+      cancelChooserBtn.onclick = function() {
+        chooseFileModal.style.display = "none";
+      }
+    }
+
+    function startRecording() {
+      if (isLgWebos) {
+        tryStartWebosRecord();
+        return;
+      }
+      if (!window.MediaRecorder) {
+        alert("MediaRecorder not supported.");
+        return;
+      }
+      try {
+        var stream = playerVideo.captureStream ? playerVideo.captureStream() :
+                     playerVideo.mozCaptureStream ? playerVideo.mozCaptureStream() : null;
+        if (!stream) { alert("Cannot record this video."); return; }
+        recorder = new MediaRecorder(stream, {mimeType: "video/webm"});
+        recordedChunks = [];
+        recorder.ondataavailable = function(e){ if(e.data.size>0) recordedChunks.push(e.data);}
+        recorder.onstop = function(){
+          recordIndicator.style.display = "none";
+          var blob = new Blob(recordedChunks, {type:"video/webm"});
+          var url = URL.createObjectURL(blob);
+          showSaveDialog(url, "recorded.webm");
+        }
+        recorder.start();
+        isRecording = true;
+        recordingSourceType = playerSource.src;
+        recordIndicator.style.display = "";
+      } catch (e) {
+        alert("Record error: "+e);
+      }
+    }
+
+    function stopRecording(forceDiscard) {
+      if (isLgWebos) {
+        if (isRecording && !forceDiscard) tryStopWebosRecordAndSave();
+        isRecording = false;
+        recordIndicator.style.display = "none";
+        return;
+      }
+      if (recorder) {
+        try { recorder.stop(); } catch (e) {}
+        recorder = null;
+        isRecording = false;
+      }
+      recordIndicator.style.display = "none";
+    }
+
+    function showSaveDialog(url, filename) {
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function(){document.body.removeChild(a); window.URL.revokeObjectURL(url);},500);
+    }
+
+    if (!isLgWebos) {
+      document.getElementById("manualStartBtn").onclick = function() {
+        if (!isRecording) startRecording();
+      }
+      document.getElementById("manualStopBtn").onclick = function() {
+        if (isRecording) stopRecording(false);
+      }
+    }
+
     document.addEventListener('keydown', function (e) {
       if (playerIsOpen) {
         if (
@@ -204,16 +361,22 @@
           setPlayerSize(Math.max(playerSizeIdx - 1, 0));
           e.preventDefault();
         }
+        if ((e.keyCode === 167 || e.code === "MediaRecord") && !isRecording) {
+          startRecording();
+          e.preventDefault();
+        }
+        if ((e.keyCode === 128 || e.code === "MediaStop") && isRecording) {
+          stopRecording(false);
+          e.preventDefault();
+        }
       }
     });
-    // Optional: click modal background exits
+
     playerModal.addEventListener('click', function (e) {
       if (e.target === playerModal) exitPlayer();
     });
 
-    // For old browsers, ensure inputList can be focused
     inputList.setAttribute("tabindex", "0");
-    // Focus input list at load
     window.onload = function () {
       inputList.focus();
       setActiveBtn(0);
