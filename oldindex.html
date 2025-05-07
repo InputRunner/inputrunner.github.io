@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Input Runner (Classic 2018)</title>
+  <meta name="viewport" content="width=480">
+  <style>
+    body { background:#222;color:#afa;font-family:sans-serif;margin:0;padding:0;}
+    #app{margin:20px auto;max-width:420px;}
+    .row{margin:20px 0;}
+    .btn{display:inline-block;width:60px;height:60px;line-height:60px;background:#111;border:2px solid #3f3;color:#0f0;border-radius:10px;margin:5px;text-align:center;cursor:pointer;}
+    .btn.selected{background:#1f0;color:#fff;border-color:#df0;}
+    .ex{background:#222;color:#fff;padding:3px 7px;border-radius:4px;margin:2px 0;display:inline-block;}
+    .modal{position:fixed;left:0;top:0;right:0;bottom:0;background:#000b;display:flex;align-items:center;justify-content:center;}
+    input{background:#111;color:#afa;border:1px solid #3f3;padding:6px 6px;border-radius:4px;margin-top:10px;}
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script>
+    // Only ES5
+    var INPUTS = [
+      {key:"hdmi1",label:"HDMI 1",src:"ext://hdmi:1"},
+      {key:"hdmi2",label:"HDMI 2",src:"ext://hdmi:2"},
+      {key:"av1",label:"AV 1",src:"ext://av:1"},
+      {key:"av2",label:"AV 2",src:"ext://av:2"},
+      {key:"comp1",label:"COMP 1",src:"ext://comp:1"},
+      {key:"scart1",label:"SCART 1",src:"ext://scart:1"},
+      {key:"tv1",label:"TV 1",src:"atv://cable:1/dvb/1"},
+      {key:"tv2",label:"TV 2",src:"atv://cable:2/dvb/2"}
+    ];
+    var sel=0, show=false, vid=0, exts=[];
+    function render() {
+      var html = '<div>'+
+        '<div class="row">';
+      for(var i=0;i<INPUTS.length;i++){
+        html+='<div class="btn'+(sel===i&&!show?' selected':'')+'" tabindex="0" onclick="pickInput('+i+')">'+INPUTS[i].label+'</div>';
+      }
+      html+='</div>';
+      for(var j=0;j<exts.length;j++) html+='<div class="ex">'+exts[j]+'</div>';
+      html+='<div><input id="inpadd" type="text" placeholder="Add Input..." onkeydown="addInput(event)"></div>';
+      html+='</div>';
+      if(show) html+='<div class="modal" onclick="closeModal(event)"><video autoplay controls style="background:#000;width:320px;height:180px;"><source src="'+INPUTS[vid].src+'" type="service/webos-external"></video></div>';
+      document.getElementById('app').innerHTML=html;
+    }
+    function pickInput(idx){sel=idx;vid=idx;show=true;render();}
+    function closeModal(e){if(e.target!==e.currentTarget)return;show=false;render();}
+    function addInput(e){
+      if(e.keyCode===13){
+        var v=e.target.value.trim();
+        if(v){exts.push(v);render();}
+        e.target.value='';
+      }
+    }
+    document.onkeydown=function(e){
+      e=e||window.event;
+      if(show&&(e.key==="Backspace"||e.key==="Escape"||e.keyCode===461)){show=false;render();e.preventDefault();return;}
+      if(document.activeElement&&document.activeElement.tagName==="INPUT")return;
+      if(e.key==="ArrowLeft"||e.keyCode===37){sel=(sel-1+INPUTS.length)%INPUTS.length;render();e.preventDefault();}
+      else if(e.key==="ArrowRight"||e.keyCode===39){sel=(sel+1)%INPUTS.length;render();e.preventDefault();}
+      else if(e.key==="Enter"||e.keyCode===13){pickInput(sel);e.preventDefault();}
+    };
+    window.pickInput=pickInput;
+    window.closeModal=closeModal;
+    window.addInput=addInput;
+    render();
+  </script>
+</body>
+</html>
