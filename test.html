@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Input Runner (Simple Player)</title>
+  <style>
+    body { background: #111; color: #afa; font-family: Arial, sans-serif; }
+    .row { margin: 10px 0; }
+    .input-btn { background: #222; color: #afa; border: 1px solid #333; border-radius: 2px; padding: 10px 13px; margin: 2px; cursor: pointer; }
+    .input-btn.active, .input-btn:focus { background: #0b0; color: #111; border-color: #7f7; outline: none; }
+    .player-modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 999; background: #000a; display: flex; flex-direction: column; align-items: center; justify-content: center;}
+    .close-hint { color: #ddb; padding: 6px; font-size: 13px; }
+    .host-box, .join-box { background:#181818; border:1px solid #333; color:#fff; padding:14px 17px; border-radius:6px; margin:17px auto; width:320px; max-width:90vw; }
+    .host-box { background:#202c18; }
+    .join-code-input, .join-ip-input { width:140px; padding:5px 8px; border-radius:3px; border:1px solid #333; font-size:1em; margin-right:8px; }
+    .host-action-btn, .join-action-btn { background:#070; color:#fff; border:1px solid #252; border-radius:3px; padding:6px 18px; font-size:1em; cursor:pointer; }
+    .host-action-btn:active, .join-action-btn:active { background:#030; }
+    .join-alt-opt { color:#a5c6e5; font-size:0.97em;margin-left:2px; }
+    .ui-section { text-align:center;margin-bottom:19px;}
+  </style>
+</head>
+<body>
+  <h2>Input Runner (Simple Player)</h2>
+  <div class="ui-section">
+    <button class="host-action-btn" id="hostBtn">Host your working input</button>
+    <button class="join-action-btn" id="joinBtn">Join host</button>
+  </div>
+  <div id="hostBox" class="host-box" style="display:none;text-align:center;">
+    <div style="margin-bottom:9px;"><b>Host Input Sharing</b></div>
+    <div id="hostStatusMsg"></div>
+    <button class="host-action-btn" id="closeHostBtn" style="margin-top:16px;">Close</button>
+  </div>
+  <div id="joinBox" class="join-box" style="display:none;">
+    <div style="margin-bottom:8px;"><b>Join Host TV</b></div>
+    <form id="joinIpForm" style="margin-bottom:8px;">
+      <input class="join-ip-input" id="hostIpInput" type="text" placeholder="TV IP (e.g. 192.168.1.50)">
+      <button class="join-action-btn" id="doJoinBtn" type="submit">Join</button>
+      <span class="join-alt-opt" id="showCodeOptBtn" style="cursor:pointer; text-decoration:underline;">Or join by code</span>
+    </form>
+    <form id="joinCodeForm" style="display:none;margin-bottom:8px;">
+      <input class="join-code-input" id="hostCodeInput" type="text" maxlength="6" placeholder="6 digit code">
+      <button class="join-action-btn" id="doJoinCodeBtn" type="submit">Join by Code</button>
+      <span class="join-alt-opt" id="showIpOptBtn" style="cursor:pointer;text-decoration:underline;">Or join by IP</span>
+    </form>
+    <div id="joinMsg" style="color:#6fc;"></div>
+    <button class="host-action-btn" id="closeJoinBtn" style="margin-top:9px;">Close</button>
+  </div>
+
+  <div id="inputList" tabindex="0">
+    <div class="row">
+      <button class="input-btn" data-src="ext://hdmi:1">HDMI 1</button>
+      <button class="input-btn" data-src="ext://hdmi:2">HDMI 2</button>
+      <button class="input-btn" data-src="ext://hdmi:3">HDMI 3</button>
+      <button class="input-btn" data-src="ext://hdmi:4">HDMI 4</button>
+    </div>
+    <div class="row">
+      <button class="input-btn" data-src="ext://comp:1">Component 1</button>
+      <button class="input-btn" data-src="ext://av:1">AV 1</button>
+      <button class="input-btn" data-src="ext://av:1">AV 2</button>
+      <button class="input-btn" data-src="ext://av:2">SCART 1</button>
+    </div>
+    <div class="row">
+      <button class="input-btn" data-src="ext://scart:1">SCART 1</button>
+      <button class="input-btn" data-src="atv://cable:1/dvb/1">Live TV 1</button>
+      <button class="input-btn" data-src="atv://cable:2/dvb/2">Live TV 2</button>
+    </div>
+  </div>
+
+  <div id="playerModal" class="player-modal" style="display:none">
+    <div id="playerLabel" style="color:#fff;margin-bottom:9px;"></div>
+    <video id="playerVideo" autoplay controls style="width: 50vw; height: 50vh;">
+      <source id="playerSource" type="service/webos-external">
+    </video>
+    <div class="close-hint">
+      (BACKSPACE/BACK/ESC = Exit, Page Up/Down = Size)
+    </div>
+  </div>
+
+  <!-- All available input video elements (always visible for TV compatibility etc) -->
+  <video autoplay style="width:50%;height:50%;">
+    <source type="service/webos-external" src="ext://hdmi:1"></source>
+  </video>
+  <video autoplay style="width:50%;height:50%;">
+    <source type="service/webos-external" src="ext://hdmi:2"></source>
+  </video>
+  <video autoplay style="width:50%;height:50%;">
+    <source type="service/webos-external" src="ext://hdmi:3"></source>
+  </video>
+  <video autoplay style="width:50%;height:50%;">
+    <source type="service/webos-external" src="ext://hdmi:4"></source>
+  </video>
+  <video autoplay style="width:50%;height:50%;">
+    <source type="service/webos-external" src="ext://comp:1"></source>
+  </video>
+  <video autoplay style="width:50%;height:50%;">
+    <source type="service/webos-external" src="ext://av:1"></source>
+  </video>
+  <video autoplay style="width:50%;height:50%;">
+    <source type="service/webos-external" src="ext://av:1"></source>
+  </video>
+  <video autoplay style="width:50%;height:50%;">
+    <source type="service/webos-external" src="ext://av:2"></source>
+  </video>
+  <video autoplay style="width:50%;height:50%;">
+    <source type="service/webos-external" src="ext://scart:1"></source>
+  </video>
+  <video autoplay style="width:50%;height:50%;">
+    <source type="service/webos-external" src="atv://cable:1/dvb/1"></source>
+  </video>
+  <video autoplay style="width:50%;height:50%;">
+    <source type="service/webos-external" src="atv://cable:2/dvb/2"></source>
+  </video>
+
+  <script>
+    // --- Input navigation/player/pageup/pagedown logic ---
+    var inputBtns = Array.prototype.slice.call(document.querySelectorAll('.input-btn'));
+    var inputList = document.getElementById('inputList');
+    var playerModal = document.getElementById('playerModal');
+    var playerVideo = document.getElementById('playerVideo');
+    var playerSource = document.getElementById('playerSource');
+    var playerLabel = document.getElementById('playerLabel');
+    var focusedIdx = 0;
+    var playerSizes = [
+      {w: "30vw", h: "24vh"}, // small
+      {w: "50vw", h: "50vh"}, // normal
+      {w: "80vw", h: "80vh"}, // big
+    ];
+    var playerSizeIdx = 1;
+    var playerIsOpen = false;
+
+    function setActiveBtn(idx) {
+      inputBtns.forEach(function (btn, i) {
+        if (i === idx) {
+          btn.className = "input-btn active";
+          try { btn.focus(); } catch (_) {}
+        } else {
+          btn.className = "input-btn";
+        }
+      });
+      focusedIdx = idx;
+    }
+    setActiveBtn(0);
+
+    function openPlayer(idx) {
+      var btn = inputBtns[idx];
+      var src = btn.getAttribute('data-src');
+      var name = btn.textContent;
+      playerSource.src = src;
+      playerVideo.load();
+      playerLabel.textContent = name;
+      playerModal.style.display = "";
+      playerSizeIdx = 1;
+      setPlayerSize(playerSizeIdx);
+      playerVideo.focus();
+      playerIsOpen = true;
+      stopRecordingIfActive();
+      currentInputSrc = src;
+      // --- Host/JOIN integration: If hosting, notify clients
+      if (isHosting && broadcastToClients) broadcastToClients({type:"inputChanged", src:src, name:name});
+    }
+
+    function setPlayerSize(idx) {
+      idx = Math.max(0, Math.min(2, idx));
+      playerSizeIdx = idx;
+      var sz = playerSizes[idx];
+      playerVideo.style.width = sz.w;
+      playerVideo.style.height = sz.h;
+    }
+
+    function exitPlayer() {
+      playerModal.style.display = "none";
+      playerVideo.pause();
+      playerIsOpen = false;
+      inputList.focus();
+      setActiveBtn(focusedIdx);
+      stopRecordingIfActive();
+    }
+
+    inputList.addEventListener('keydown', function (e) {
+      if (playerIsOpen) return;
+      if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+        var next = (focusedIdx + 1) % inputBtns.length;
+        setActiveBtn(next);
+        e.preventDefault();
+      } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+        var prev = (focusedIdx - 1 + inputBtns.length) % inputBtns.length;
+        setActiveBtn(prev);
+        e.preventDefault();
+      } else if (e.key === "Enter" || e.key === " ") {
+        openPlayer(focusedIdx);
+        e.preventDefault();
+      }
+    });
+
+    inputBtns.forEach(function (btn, idx) {
+      btn.addEventListener('click', function () {
+        setActiveBtn(idx);
+        openPlayer(idx);
+      });
+      btn.addEventListener('focus', function () { setActiveBtn(idx); });
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (playerIsOpen) {
+        if (
+          e.key === "Backspace" ||
+          e.key === "Escape" ||
+          e.key === "VK_BACK" ||
+          e.key === "BACK" ||
+          e.keyCode === 461 ||
+          e.keyCode === 412
+        ) {
+          exitPlayer();
+          e.preventDefault();
+          return;
+        }
+        if (e.key === "PageUp" || e.keyCode === 33) {
+          setPlayerSize(Math.min(playerSizeIdx + 1, 2));
+          e.preventDefault();
+        }
+        if (e.key === "PageDown" || e.keyCode === 34) {
+          setPlayerSize(Math.max(playerSizeIdx - 1, 0));
+          e.preventDefault();
+        }
+        // RECORD (keycode 167)
+        if (e.keyCode === 167) {
+          startRecording();
+          e.preventDefault();
+        }
+        // STOP (keycode 128)
+        if (e.keyCode === 128) {
+          stopRecordingAndSave();
+          e.preventDefault();
+        }
+      }
+    });
+
+    playerModal.addEventListener('click', function (e) {
+      if (e.target === playerModal) exitPlayer();
+    });
+
+    inputList.setAttribute("tabindex", "0");
+    window.onload = function () {
+      inputList.focus();
+      setActiveBtn(0);
+    };
+
+    // ---------------- Record functionality -------------------
+    var mediaRecorder = null;
+    var recordedChunks = [];
+    var isRecording = false;
+    var currentInputSrc = null;
+
+    function startRecording() {
+      if (isRecording) return;
+      if ('MediaRecorder' in window) {
+        var stream = playerVideo.captureStream ? playerVideo.captureStream() : (playerVideo.mozCaptureStream ? playerVideo.mozCaptureStream() : null);
+        if (!stream) {
+          alert("Screen recording is not supported on this device/browser.");
+          return;
+        }
+        mediaRecorder = new MediaRecorder(stream);
+        recordedChunks = [];
+        mediaRecorder.ondataavailable = function(event) {
+          if (event.data.size > 0) {
+            recordedChunks.push(event.data);
+          }
+        };
+        mediaRecorder.onstop = function() {
+          saveRecording();
+        };
+        mediaRecorder.start();
+        isRecording = true;
+        showRecordingIndicator(true);
+      } else if (typeof window.webOSMediaRecorder !== "undefined") {
+        window.webOSMediaRecorder.startRecording(currentInputSrc);
+        isRecording = true;
+        showRecordingIndicator(true);
+      } else {
+        alert("Screen recording is not available on this device.");
+      }
+    }
+
+    function stopRecordingAndSave() {
+      if (isRecording) {
+        if (mediaRecorder) {
+          mediaRecorder.stop();
+        } else if (typeof window.webOSMediaRecorder !== "undefined") {
+          window.webOSMediaRecorder.stopRecording(function(result) {
+            var path = prompt("Output path (e.g. /tmp/):", "/tmp/");
+            if (path) {
+              window.webOSMediaRecorder.saveFile(path + "input_runner_recording.mp4");
+            }
+          });
+        }
+        isRecording = false;
+        showRecordingIndicator(false);
+      }
+    }
+
+    function stopRecordingIfActive() {
+      if (isRecording && mediaRecorder) {
+        mediaRecorder.stop();
+        isRecording = false;
+        showRecordingIndicator(false);
+      }
+    }
+
+    function saveRecording() {
+      if (recordedChunks.length > 0) {
+        var blob = new Blob(recordedChunks, { type: "video/mp4" });
+        var url = URL.createObjectURL(blob);
+        var filename = "input_screen_recording.mp4";
+        var path = prompt("Save recording file (e.g. /tmp/):", "/tmp/");
+        if (path !== null) {
+          if (typeof webOS !== "undefined" && webOS && webOS.service && webOS.service.request) {
+            alert("Saving to TV " + path + filename);
+            // Real LG TV API code needed here.
+          } else {
+            var a = document.createElement("a");
+            a.style.display = "none";
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(function(){document.body.removeChild(a); URL.revokeObjectURL(url);}, 100);
+          }
+        }
+        recordedChunks = [];
+      }
+    }
+
+    function showRecordingIndicator(show) {
+      var lab = document.getElementById('playerLabel');
+      if (!lab) return;
+      var ind = document.getElementById('recordIndicator');
+      if (!ind) {
+        ind = document.createElement('span');
+        ind.id = 'recordIndicator';
+        ind.style = "color:red;font-size:18px;margin-left:16px;";
+        ind.textContent = "● REC";
+        lab.parentNode.insertBefore(ind, lab.nextSibling);
+      }
+      ind.style.display = show ? "" : "none";
+    }
+    // ---------------------------------------------------------
+
+    // ------------- HOST-JOIN CODE (real interaction) ---------
+    var hostBtn = document.getElementById("hostBtn");
+    var joinBtn = document.getElementById("joinBtn");
+    var hostBox = document.getElementById("hostBox");
+    var joinBox = document.getElementById("joinBox");
+    var closeHostBtn = document.getElementById("closeHostBtn");
+    var closeJoinBtn = document.getElementById("closeJoinBtn");
+    var hostStatusMsg = document.getElementById("hostStatusMsg");
+    var joinIpForm = document.getElementById("joinIpForm");
+    var joinCodeForm = document.getElementById("joinCodeForm");
+    var hostIpInput = document.getElementById("hostIpInput");
+    var hostCodeInput = document.getElementById("hostCodeInput");
+    var joinMsg = document.getElementById("joinMsg");
+    var showCodeOptBtn = document.getElementById("showCodeOptBtn");
+    var showIpOptBtn = document.getElementById("showIpOptBtn");
+
+    var isHosting = false;
+    var isJoining = false;
+    var hostServer = null;
+    var joinSocket = null;
+    var hostCode = null;
+    var hostCodeTimer = null;
+    var hostCodeTimeoutMs = 60 * 1000; // 1 minute code expiry
+    var codeServerApi = "https://api.codeshare.dev/hostmap"; // Example endpoint. 
+    var serverPort = 19870;
+    // For "real" device: run a websocket server on the TV.
+
+    // Utility: Create random code
+    function randomCode() {
+      return (Math.floor(Math.random() * 1e6) + '').padStart(6,'0');
+    }
+
+    // Get local IP (browser fallback if needed)
+    function getLocalIp(cb) {
+      var defaultIp = "192.168.1.10";
+      if (window.webOS && webOS.deviceInfo && webOS.deviceInfo.networkInterface) {
+        cb(webOS.deviceInfo.networkInterface.ipAddress || defaultIp);
+      } else if (window.RTCPeerConnection) {
+        var pc = new RTCPeerConnection({iceServers:[]});
+        pc.createDataChannel("");
+        pc.createOffer().then(sdp => pc.setLocalDescription(sdp)).catch(()=>{});
+        pc.onicecandidate = function(e){
+          if (e && e.candidate && e.candidate.candidate) {
+            var ips = e.candidate.candidate.match(/([0-9]{1,3}(\.[0-9]{1,3}){3})/g);
+            if (ips && ips.length) {
+              cb(ips[0]);
+              pc.onicecandidate = null;
+              pc.close();
+            }
+          }
+        };
+        setTimeout(function(){ cb(defaultIp); }, 850);
+      } else {
+        cb(defaultIp);
+      }
+    }
+
+    // WS server for inputs (TV host side)
+    var serverWs = null;
+    var connectedClients = [];
+
+    function startHostWsServer(ip) {
+      // Real device would run ws server here. (For real LG TV app)
+      // Here for concept, do nothing (handled externally).
+    }
+
+    // Broadcast to all join-clients
+    function broadcastToClients(msg) {
+      connectedClients.forEach(function(ws) {
+        if (ws.readyState === 1) try { ws.send(JSON.stringify(msg)); } catch(_){}
+      });
+    }
+
+    // Code sharing server to map 6-digit code to TV IP
+    function registerCodeWithServer(code, ip) {
+      var req = new XMLHttpRequest();
+      req.open("POST", codeServerApi + "/register", true);
+      req.setRequestHeader("Content-Type", "application/json");
+      req.send(JSON.stringify({
+        code: code,
+        ip: ip,
+        port: serverPort,
+        expires: Date.now() + hostCodeTimeoutMs
+      }));
+    }
+    function lookupCodeFromServer(code, callback) {
+      var req = new XMLHttpRequest();
+      req.open("POST", codeServerApi + "/lookup", true);
+      req.setRequestHeader("Content-Type", "application/json");
+      req.onreadystatechange = function() {
+        if (req.readyState == 4) {
+          if (req.status == 200) {
+            try {
+              var data = JSON.parse(req.responseText);
+              if (data && data.ip) callback(null, data.ip);
+              else callback("noip");
+            } catch(_){callback("err");}
+          } else callback("no");
+        }
+      };
+      req.send(JSON.stringify({ code: code }));
+    }
+
+    // --------- HOST UI Logic ----------
+    hostBtn.onclick = function () {
+      isHosting = true;
+      getLocalIp(function(ip){
+        // Generate a new code (and set up auto regeneration/expiry!)
+        function setNewCodeAndTimer() {
+          hostCode = randomCode();
+          registerCodeWithServer(hostCode, ip);
+          if (hostCodeTimer) clearTimeout(hostCodeTimer);
+          hostCodeTimer = setTimeout(function(){
+            setNewCodeAndTimer();
+            showHostUI(ip);
+          }, hostCodeTimeoutMs);
+        }
+        setNewCodeAndTimer();
+        startHostWsServer(ip);
+        showHostUI(ip);
+      });
+      hostBox.style.display = "";
+      joinBox.style.display = "none";
+    };
+    function showHostUI(ip) {
+      hostStatusMsg.innerHTML = 'You are currently hosting your inputs to <b>' + ip + '</b><br><span style="font-size:.92em;color:#cee;">(Keep app open and visible. Others on same network can join.)</span><br><br>Share this IP or your <b>host code: <span id="hostCodeText" style="color:#fd7;">'+hostCode+'</span></b><br><span style="font-size:0.94em; color:#aff;">(Code expires in ~1 minute, will update automatically.)</span>';
+    }
+    closeHostBtn.onclick = function () {
+      hostBox.style.display = "none";
+      isHosting = false;
+      if (hostCodeTimer) clearTimeout(hostCodeTimer);
+      hostCode = null;
+      // Would also shutdown ws server
+    };
+
+    // --------- JOIN UI Logic ----------
+    joinBtn.onclick = function () {
+      joinBox.style.display = "";
+      hostBox.style.display = "none";
+      joinMsg.innerHTML = "";
+      joinMsg.style.color = "#6fc";
+      joinIpForm.style.display = "";
+      joinCodeForm.style.display = "none";
+      hostIpInput.value = "";
+      hostCodeInput.value = "";
+      isJoining = true;
+    };
+    closeJoinBtn.onclick = function () {
+      joinBox.style.display = "none";
+      isJoining = false;
+      // if (joinSocket) joinSocket.close();
+    };
+
+    showCodeOptBtn.onclick = function(){
+      joinIpForm.style.display = "none";
+      joinCodeForm.style.display = "";
+      joinMsg.innerHTML = "";
+      joinMsg.style.color = "#6fc";
+      hostCodeInput.value = "";
+      hostCodeInput.focus();
+    };
+    showIpOptBtn.onclick = function(){
+      joinIpForm.style.display = "";
+      joinCodeForm.style.display = "none";
+      joinMsg.innerHTML = "";
+      joinMsg.style.color = "#6fc";
+      hostIpInput.value = "";
+      hostIpInput.focus();
+    };
+
+    function getInputList() {
+      var arr = [];
+      inputBtns.forEach(function(btn){
+        arr.push({name: btn.textContent, src: btn.getAttribute("data-src")});
+      });
+      return arr;
+    }
+
+    joinIpForm.onsubmit = function(ev) {
+      ev.preventDefault();
+      var ip = hostIpInput.value.trim();
+      if (!ip) {
+        joinMsg.innerHTML = '<span style="color:#f66;">Please enter a valid IP!</span>';
+        joinMsg.style.color = "#f66";
+        hostIpInput.focus();
+        return false;
+      }
+      joinMsg.innerHTML = "Connecting to host at <b style='color:#0f0'>" + ip + "</b>...";
+      joinMsg.style.color = "#6fc";
+      joinHost(ip, serverPort);
+      return false;
+    };
+
+    joinCodeForm.onsubmit = function(ev) {
+      ev.preventDefault();
+      var code = hostCodeInput.value.trim();
+      if (!code || code.length != 6) {
+        joinMsg.innerHTML = '<span style="color:#f66;">Please enter a 6-digit code!</span>';
+        joinMsg.style.color = "#f66";
+        hostCodeInput.focus();
+        return false;
+      }
+      joinMsg.innerHTML = "Resolving code <b>" + code + "</b>...";
+      joinMsg.style.color = "#6fc";
+      lookupCodeFromServer(code, function(err, ip) {
+        if (err || !ip) {
+          joinMsg.innerHTML = "<b style='color:#f66;'>Invalid or expired code (not found).</b>";
+          joinMsg.style.color = "#f66";
+        } else {
+          joinMsg.innerHTML = "Connecting by code to <b style='color:#0f0;'>" + ip + "</b> ...";
+          joinMsg.style.color = "#6fc";
+          joinHost(ip, serverPort);
+        }
+      });
+      return false;
+    };
+
+    function joinHost(ip, port) {
+      // Real join via websocket connection
+      var ws;
+      var gotList = false;
+      var reconnectTries = 0;
+      // Attempt connection (browser-side).
+      // JS on computer will connect to ws://TV-IP:19870
+      try {
+        ws = new window.WebSocket("ws://" + ip + ":" + port);
+        ws.onopen = function() {
+          joinMsg.innerHTML = "<span style=\"color:#0f0;\">Successfully connected to host!<br>Listing input sources...</span>";
+          joinMsg.style.color = "#0f0";
+          ws.send(JSON.stringify({type: "getInputList"}));
+        };
+        ws.onmessage = function(ev) {
+          var msg = {};
+          try { msg = JSON.parse(ev.data); } catch(_){}
+          if (msg.type==="inputList" && Array.isArray(msg.list)) {
+            gotList = true;
+            joinMsg.innerHTML = "<span style='color:#0f0'><b>Successfully connected to host!<br>Select an input below:</b><br></span>";
+            joinMsg.style.color = "#0f0";
+            msg.list.forEach(function(inp,idx) {
+              var btn = document.createElement("button");
+              btn.textContent = inp.name;
+              btn.className = "input-btn";
+              btn.onclick = function() {
+                ws.send(JSON.stringify({type:"requestInput", inputSrc: inp.src}));
+                openClientPlayer(inp);
+              };
+              joinMsg.appendChild(btn);
+            });
+          } else if (msg.type==="inputChanged") {
+            // Auto switch input if host changes input (sync)
+            openClientPlayer({ name: msg.name, src: msg.src });
+          }
+        };
+        ws.onerror = function() {
+          joinMsg.innerHTML = "<b style='color:#f66'>Could not connect to host at " + ip + "!</b>";
+          joinMsg.style.color = "#f66";
+        };
+        ws.onclose = function() {
+          if (!gotList && reconnectTries++ < 2) {
+            setTimeout(function(){joinHost(ip,port);},700);
+          } else if (!gotList) {
+            joinMsg.innerHTML = "<b style='color:#f66'>Connection to host lost or unavailable.</b>";
+            joinMsg.style.color = "#f66";
+          }
+        };
+        joinSocket = ws;
+      } catch (e) {
+        joinMsg.innerHTML = "<b style='color:#f66'>WebSocket failed: "+e.message+"</b>";
+        joinMsg.style.color = "#f66";
+      }
+    }
+
+    // -------- Join-client video player ----------
+    function openClientPlayer(inputObj) {
+      playerLabel.textContent = inputObj.name + " (Joined)";
+      playerSource.src = inputObj.src;
+      playerVideo.load();
+      playerModal.style.display = "";
+      playerSizeIdx = 1;
+      setPlayerSize(playerSizeIdx);
+      playerVideo.focus();
+      playerIsOpen = true;
+      stopRecordingIfActive();
+      currentInputSrc = inputObj.src || null;
+    }
+  </script>
+</body>
+</html>
