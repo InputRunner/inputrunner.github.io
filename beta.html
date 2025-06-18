@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Input Runner (Simple Player)</title>
+  <style>
+    body { 
+      background: #111; 
+      color: #afa; 
+      font-family: Arial, sans-serif; 
+    }
+    .row { 
+      margin: 16px 0; 
+    }
+    .input-btn { 
+      background: #222; 
+      color: #afa; 
+      border: 1px solid #333; 
+      border-radius: 2px; 
+      padding: 12px 14px; 
+      margin: 2px; 
+      cursor: pointer; 
+    }
+    .input-btn.active, .input-btn:focus { 
+      background: #0b0; 
+      color: #111; 
+      border-color: #7f7; 
+      outline: none; 
+    }
+    .player-modal { 
+      position: fixed; 
+      top: 0; 
+      left: 0; 
+      width: 100vw; 
+      height: 100vh; 
+      z-index: 999; 
+      background: #000a; 
+      display: flex; 
+      flex-direction: column; 
+      align-items: center; 
+      justify-content: center;
+    }
+    .close-hint { 
+      color: #ddb; 
+      padding: 6px; 
+      font-size: 13px; 
+    }
+    .record-indicator {
+      color: #e44;
+      font-weight:bold;
+      font-size:21px;
+      margin: 4px 0 6px 0;
+    }
+    .record-btn-ui {
+      background:#300;
+      color:#fff;
+      border:1px solid #e44;
+      padding:7px 15px; margin:9px 7px; border-radius:4px;
+      cursor:pointer; font-weight:bold;
+    }
+    .choose-file-modal {
+      position:fixed;top:0;left:0;width:100vw;height:100vh;background:#000c;z-index:1000;
+      display:flex;align-items:center;justify-content:center;
+    }
+    .chooser-box {
+      background:#222;color:#fff;padding:30px 34px;border-radius:9px;text-align:center;min-width:200px;
+    }
+    .chooser-path-input {
+      padding:6px 13px;font-size:1em;border:1px solid #888;background:#181818;color:#fff;border-radius:5px;
+      margin-bottom:10px;width:75%;
+    }
+    #history { margin:20px; }
+    #history label {font-weight:bold}
+    #history-list { margin-top:8px;}
+    #history-list a { color: #ace; display: block; margin-bottom: 6px; font-size: 1em;}
+  </style>
+</head>
+<body>
+  <h2>Input Runner (Simple Player)</h2>
+  <div id="inputList" tabindex="0">
+    <div class="row">
+      <button class="input-btn" data-src="ext://hdmi:1">HDMI 1</button>
+      <button class="input-btn" data-src="ext://hdmi:2">HDMI 2</button>
+      <button class="input-btn" data-src="ext://hdmi:3">HDMI 3</button>
+      <button class="input-btn" data-src="ext://hdmi:4">HDMI 4</button>
+    </div>
+    <div class="row">
+      <button class="input-btn" data-src="ext://comp:1">Component 1</button>
+      <button class="input-btn" data-src="ext://av:1">AV 1</button>
+      <button class="input-btn" data-src="ext://av:2">AV 2</button>
+      <button class="input-btn" data-src="ext://scart:1">SCART 1</button>
+    </div>
+    <div class="row">
+      <button class="input-btn" data-src="atv://cable:1/dvb/1">Live TV 1</button>
+      <button class="input-btn" data-src="atv://cable:2/dvb/2">Live TV 2</button>
+    </div>
+  </div>
+
+  <div id="playerModal" class="player-modal" style="display:none">
+    <div id="playerLabel"></div>
+    <div id="recordIndicator" class="record-indicator" style="display:none">● REC</div>
+    <video id="playerVideo" autoplay controls style="width: 50%; height: 50%;">
+      <source id="playerSource" type="service/webos-external">
+    </video>
+    <div id="recordBtns" style="margin-top:8px;display:none;">
+      <button type="button" class="record-btn-ui" id="manualStartBtn">● Start Recording</button>
+      <button type="button" class="record-btn-ui" id="manualStopBtn">■ Stop &amp; Save</button>
+    </div>
+    <div class="close-hint">
+      (BACKSPACE/BACK/ESC = Exit, Page Up/Down = Size, RECORD = Start, STOP = Save)
+    </div>
+  </div>
+
+  <div id="chooseFileModal" class="choose-file-modal" style="display:none">
+    <form class="chooser-box" id="fileChooserForm" autocomplete="off">
+      <div style="font-size:1.1em;margin-bottom:10px;color:#f3c83d;">
+        Save Recording<br>Enter folder, then a filename (mp4):
+      </div>
+      <input class="chooser-path-input" id="filePathInput" type="text" placeholder="/tmp/rec.mp4" value="/tmp/rec.mp4" autocomplete="off" required>
+      <div style="margin-top:13px;">
+        <button type="submit" class="record-btn-ui" style="background:#253;">Save</button>
+        <button type="button" class="record-btn-ui" style="background:#334;" id="cancelChooserBtn">Cancel</button>
+      </div>
+    </form>
+  </div>
+
+  <div id="history">
+    <label>Recorded Input History:</label>
+    <div id="history-list"></div>
+  </div>
+
+  <video autoplay style="width:50%;height:50%">
+    <source type="service/webos-external" src="ext://scart:1"></source>
+  </video>
+
+  <video autoplay style="width:50%;height:50%">
+    <source type="service/webos-external" src="atv://cable:1/dvb/1"></source>
+  </video>
+
+  <video autoplay style="width:50%;height:50%">
+    <source type="service/webos-external" src="atv://cable:2/dvb/2"></source>
+  </video>
+
+  <script>
+    // Simple legacy JS code for selection/player/record/history, minimal extra features
+
+    var inputList = document.getElementById('inputList');
+    var playerModal = document.getElementById('playerModal');
+    var playerVideo = document.getElementById('playerVideo');
+    var playerSource = document.getElementById('playerSource');
+    var playerLabel = document.getElementById('playerLabel');
+    var inputBtns = Array.prototype.slice.call(document.querySelectorAll('.input-btn'));
+    var focusedIdx = 0;
+    var playerSizes = [
+      {w: "32vw", h: "28vh"},
+      {w: "50vw", h: "50vh"},
+      {w: "80vw", h: "80vh"}
+    ];
+    var playerSizeIdx = 1;
+    var playerIsOpen = false;
+
+    // --- Recording/History additions
+    var recordIndicator = document.getElementById('recordIndicator');
+    var recordBtns = document.getElementById('recordBtns');
+    var isLgWebos = navigator.userAgent.indexOf("WebOS") > -1 || navigator.userAgent.indexOf("webOS") > -1;
+    var chooseFileModal = document.getElementById("chooseFileModal");
+    var fileChooserForm = document.getElementById("fileChooserForm");
+    var filePathInput = document.getElementById("filePathInput");
+    var cancelChooserBtn = document.getElementById("cancelChooserBtn");
+    var historyList = document.getElementById("history-list");
+
+    var isRecording = false;
+    var recorder = null;
+    var recordedChunks = [];
+    var historyEntries = [];
+
+    if (!isLgWebos) { recordBtns.style.display = ""; } else { recordBtns.style.display = "none"; }
+
+    function setActiveBtn(idx) {
+      inputBtns.forEach(function(btn, i) {
+        if (i === idx) {
+          btn.classList.add("active");
+          btn.focus();
+        } else {
+          btn.classList.remove("active");
+        }
+      });
+      focusedIdx = idx;
+    }
+    setActiveBtn(0);
+
+    function setPlayerSize(idx) {
+      idx = Math.max(0, Math.min(2, idx));
+      playerSizeIdx = idx;
+      var sz = playerSizes[idx];
+      playerVideo.style.width = sz.w;
+      playerVideo.style.height = sz.h;
+    }
+
+    function openPlayer(idx) {
+      var btn = inputBtns[idx];
+      var src = btn.getAttribute('data-src');
+      var name = btn.textContent;
+      playerSource.src = src;
+      playerVideo.load();
+      playerLabel.textContent = name;
+      playerModal.style.display = "";
+      playerSizeIdx = 1;
+      setPlayerSize(playerSizeIdx);
+      playerVideo.focus();
+      playerIsOpen = true;
+      stopRecording(true);
+      recordIndicator.style.display = "none";
+
+      // --- auto-record to m3u8, save blob and update history
+      if (window.MediaRecorder) {
+        try {
+          var stream = playerVideo.captureStream ? playerVideo.captureStream() :
+                       playerVideo.mozCaptureStream ? playerVideo.mozCaptureStream() : null;
+          if (stream) {
+            var mediaRec = new MediaRecorder(stream, {mimeType: "video/webm;codecs=vp8"});
+            var chunks = [];
+            mediaRec.ondataavailable = function(e) { if (e.data.size) chunks.push(e.data); };
+            mediaRec.onstop = function() {
+              var blob = new Blob(chunks, {type:"application/vnd.apple.mpegurl"});
+              var now = new Date(), t = now.getHours()+":"+now.getMinutes()+":"+now.getSeconds();
+              var fileName = name.replace(/\s+/g,"_")+"_"+t+".m3u8";
+              var url = window.URL.createObjectURL(blob);
+              // update history & add <a>
+              addHistoryEntry(fileName, url);
+            };
+            mediaRec.start();
+            setTimeout(function() { mediaRec.stop(); }, 4000); // Only save 4s as demo
+          }
+        } catch (e) { }
+      }
+    }
+
+    function addHistoryEntry(fname, url) {
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = fname;
+      a.textContent = fname + " (save)";
+      historyList.appendChild(a);
+    }
+
+    function exitPlayer() {
+      playerModal.style.display = "none";
+      playerVideo.pause();
+      playerIsOpen = false;
+      stopRecording(true);
+      inputList.focus();
+      setActiveBtn(focusedIdx);
+      recordIndicator.style.display = "none";
+    }
+
+    // --- Arrow navigation
+    inputList.addEventListener('keydown', function (e) {
+      if (playerIsOpen) return;
+      if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+        var next = (focusedIdx + 1) % inputBtns.length;
+        setActiveBtn(next);
+        e.preventDefault();
+      } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+        var prev = (focusedIdx - 1 + inputBtns.length) % inputBtns.length;
+        setActiveBtn(prev);
+        e.preventDefault();
+      } else if (e.key === "Enter" || e.key === " ") {
+        openPlayer(focusedIdx);
+        e.preventDefault();
+      }
+    });
+
+    inputBtns.forEach(function(btn, idx) {
+      btn.addEventListener('click', function() {
+        setActiveBtn(idx);
+        openPlayer(idx);
+      });
+      btn.addEventListener('focus', function () { setActiveBtn(idx); });
+    });
+
+    // --- Player modal keys
+    document.addEventListener('keydown', function (e) {
+      if (playerIsOpen) {
+        if (
+          e.key === "Backspace" || e.key === "Escape" ||
+          e.key === "VK_BACK" || e.key === "BACK" ||
+          e.keyCode === 461 || e.keyCode === 412
+        ) {
+          exitPlayer();
+          e.preventDefault();
+          return;
+        }
+        if (e.key === "PageUp" || e.keyCode === 33) {
+          setPlayerSize(Math.min(playerSizeIdx + 1, 2));
+          e.preventDefault();
+        }
+        if (e.key === "PageDown" || e.keyCode === 34) {
+          setPlayerSize(Math.max(playerSizeIdx - 1, 0));
+          e.preventDefault();
+        }
+      }
+    });
+
+    playerModal.addEventListener('click', function (e) {
+      if (e.target === playerModal) exitPlayer();
+    });
+
+    // --- Focus on list at load
+    inputList.setAttribute("tabindex", "0");
+    window.onload = function () {
+      inputList.focus();
+      setActiveBtn(0);
+    };
+  </script>
+</body>
+</html>
