@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>webOS Single-Stream Multiview</title>
+    <!-- Load Tailwind CSS (for structural utility classes used in the body/controls) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Base styles for high compatibility */
+        body {
+            background-color: #111; /* Darker background */
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Prevent scrolling */
+        }
+        
+        /* Main Container for the 4x2 layout */
+        .main-container {
+            display: flex;
+            flex-wrap: wrap;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* Styling for each video card - 4 columns, 2 rows */
+        .video-card {
+            width: 25%;
+            height: 50%;
+            box-sizing: border-box; /* Include padding in width/height */
+            padding: 5px; /* Minimal gap */
+            background-color: #1f2937; /* Dark gray card background */
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .video-card:hover {
+            transform: scale(1.01);
+            z-index: 5;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); /* Blue glow on hover */
+        }
+        .video-card.active {
+            border: 2px solid #3b82f6; /* Active blue border */
+        }
+
+        /* Specific style for the Broadcast TV card (Optional distinction) */
+        .broadcast-card {
+            background-color: #1e3a8a; /* Dark blue for distinction */
+        }
+
+        /* Header styling */
+        .card-header {
+            font-size: 0.875rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 5px;
+        }
+
+        /* Text states */
+        .state-muted { color: #f87171; /* Red */ }
+        .state-unmuted { color: #34d399; /* Green */ }
+        .source-text {
+            font-size: 0.75rem;
+            color: #9ca3af; /* Light gray text */
+            margin-top: 3px;
+        }
+
+        /* Define a 16:9 aspect ratio container for the video elements */
+        .video-container {
+            width: 100%;
+            padding-top: calc(100% * 9 / 16); /* Dynamic 16:9 Aspect Ratio */
+            position: relative;
+        }
+
+        /* Video element must fill its container */
+        .video-element {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 4px;
+            background-color: #000;
+        }
+
+        /* Overlay for "No Signal" message */
+        .signal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            color: #ff3838; /* Brighter red */
+            display: flex; /* Changed from none in your original CSS to be managed by JS */
+            justify-content: center;
+            align-items: center;
+            font-size: 2rem;
+            font-weight: 800;
+            border-radius: 4px;
+            z-index: 10;
+            opacity: 1;
+            transition: opacity 0.3s;
+        }
+        /* Hidden state for the overlay */
+        .signal-overlay.hidden {
+            display: none;
+            opacity: 0;
+        }
+
+        /* Indicator for which video is currently unmuted */
+        .unmuted-indicator {
+            position: absolute;
+            top: 15px; /* Adjust placement for better visibility */
+            right: 15px;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background-color: #22c55e;
+            display: none; /* Managed by JS */
+            z-index: 20;
+            box-shadow: 0 0 10px #22c55e;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Main 4x2 Grid Container -->
+    <div class="main-container">
+        
+        <!-- Video 1: HDMI 1 -->
+        <div class="video-card" data-input-src="ext://hdmi:1" data-input-name="HDMI 1">
+            <div class="card-header">
+                <span class="text-blue-400">HDMI 1</span>
+                <span id="state-hdmi-1" class="state-muted">Muted</span>
+            </div>
+            <div class="video-container">
+                <video id="video-hdmi-1" class="video-element" autoplay muted playsinline poster="https://placehold.co/1000x562/1f2937/9ca3af?text=HDMI+1">
+                </video>
+                <div class="signal-overlay hidden">NO SIGNAL</div>
+            </div>
+            <div class="unmuted-indicator hidden"></div>
+        </div>
+
+        <!-- Video 2: HDMI 2 -->
+        <div class="video-card" data-input-src="ext://hdmi:2" data-input-name="HDMI 2">
+            <div class="card-header">
+                <span class="text-blue-400">HDMI 2</span>
+                <span id="state-hdmi-2" class="state-muted">Muted</span>
+            </div>
+            <div class="video-container">
+                <video id="video-hdmi-2" class="video-element" autoplay muted playsinline poster="https://placehold.co/1000x562/1f2937/9ca3af?text=HDMI+2">
+                </video>
+                <div class="signal-overlay">NO SIGNAL</div>
+            </div>
+            <div class="unmuted-indicator"></div>
+        </div>
+
+        <!-- Video 3: HDMI 3 -->
+        <div class="video-card" data-input-src="ext://hdmi:3" data-input-name="HDMI 3">
+            <div class="card-header">
+                <span class="text-blue-400">HDMI 3</span>
+                <span id="state-hdmi-3" class="state-muted">Muted</span>
+            </div>
+            <div class="video-container">
+                <video id="video-hdmi-3" class="video-element" autoplay muted playsinline poster="https://placehold.co/1000x562/1f2937/9ca3af?text=HDMI+3">
+                </video>
+                <div class="signal-overlay">NO SIGNAL</div>
+            </div>
+            <div class="unmuted-indicator"></div>
+        </div>
+
+        <!-- Video 4: HDMI 4 -->
+        <div class="video-card" data-input-src="ext://hdmi:4" data-input-name="HDMI 4">
+            <div class="card-header">
+                <span class="text-blue-400">HDMI 4</span>
+                <span id="state-hdmi-4" class="state-muted">Muted</span>
+            </div>
+            <div class="video-container">
+                <video id="video-hdmi-4" class="video-element" autoplay muted playsinline poster="https://placehold.co/1000x562/1f2937/9ca3af?text=HDMI+4">
+                </video>
+                <div class="signal-overlay">NO SIGNAL</div>
+            </div>
+            <div class="unmuted-indicator"></div>
+        </div>
+        
+        <!-- Video 5: Component 1 -->
+        <div class="video-card" data-input-src="ext://comp:1" data-input-name="Component 1">
+            <div class="card-header">
+                <span class="text-yellow-400">Component 1</span>
+                <span id="state-comp-1" class="state-muted">Muted</span>
+            </div>
+            <div class="video-container">
+                <video id="video-comp-1" class="video-element" autoplay muted playsinline poster="https://placehold.co/1000x562/1f2937/9ca3af?text=Component+1">
+                </video>
+                <div class="signal-overlay">NO SIGNAL</div>
+            </div>
+            <div class="unmuted-indicator"></div>
+        </div>
+
+        <!-- Video 6: AV 1 -->
+        <div class="video-card" data-input-src="ext://av:1" data-input-name="AV 1">
+            <div class="card-header">
+                <span class="text-yellow-400">AV 1</span>
+                <span id="state-av-1" class="state-muted">Muted</span>
+            </div>
+            <div class="video-container">
+                <video id="video-av-1" class="video-element" autoplay muted playsinline poster="https://placehold.co/1000x562/1f2937/9ca3af?text=AV+1">
+                </video>
+                <div class="signal-overlay">NO SIGNAL</div>
+            </div>
+            <div class="unmuted-indicator"></div>
+        </div>
+        
+        <!-- Video 7: AV 2 -->
+        <div class="video-card" data-input-src="ext://av:2" data-input-name="AV 2">
+            <div class="card-header">
+                <span class="text-yellow-400">AV 2</span>
+                <span id="state-av-2" class="state-muted">Muted</span>
+            </div>
+            <div class="video-container">
+                <video id="video-av-2" class="video-element" autoplay muted playsinline poster="https://placehold.co/1000x562/1f2937/9ca3af?text=AV+2">
+                </video>
+                <div class="signal-overlay">NO SIGNAL</div>
+            </div>
+            <div class="unmuted-indicator"></div>
+        </div>
+
+        <!-- Video 8: TV Broadcast -->
+        <div class="video-card broadcast-card" data-input-src="tv://" data-input-name="TV Broadcast">
+            <div class="card-header">
+                <span class="text-green-400">TV Broadcast</span>
+                <span id="state-tv-broadcast" class="state-muted">Muted</span>
+            </div>
+            <div class="video-container">
+                <video id="video-tv-broadcast" class="video-element" autoplay muted playsinline poster="https://placehold.co/1000x562/1e3a8a/9ca3af?text=TV+Broadcast">
+                </video>
+                <div class="signal-overlay">NO SIGNAL</div>
+            </div>
+            <div class="unmuted-indicator"></div>
+        </div>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const videoCards = document.querySelectorAll('.video-card');
+            let activeVideo = null;
+
+            // Function to reset all videos and hide their overlays
+            function resetAllVideos() {
+                videoCards.forEach(card => {
+                    const video = card.querySelector('.video-element');
+                    const stateSpan = card.querySelector('span:last-child');
+                    const indicator = card.querySelector('.unmuted-indicator');
+                    const overlay = card.querySelector('.signal-overlay');
+
+                    // 1. Visually reset card
+                    card.classList.remove('active');
+                    
+                    // 2. Mute and stop the stream for resource release
+                    video.muted = true;
+                    video.pause();
+                    video.removeAttribute('src'); // Crucial for resetting system input stream
+                    video.load();
+
+                    // 3. Update status text and indicators to Muted/No Signal
+                    stateSpan.textContent = 'Muted';
+                    stateSpan.classList.remove('state-unmuted');
+                    stateSpan.classList.add('state-muted');
+                    indicator.style.display = 'none';
+                    
+                    // 4. Show the No Signal overlay (since we expect only one active stream)
+                    overlay.style.display = 'flex';
+                });
+            }
+
+            // Function to activate and switch the input
+            function activateInput(card) {
+                const sourceUrl = card.getAttribute('data-input-src');
+                const inputName = card.getAttribute('data-input-name');
+                const video = card.querySelector('.video-element');
+                const stateSpan = card.querySelector('span:last-child');
+                const indicator = card.querySelector('.unmuted-indicator');
+                const overlay = card.querySelector('.signal-overlay');
+                
+                // --- Step 1: Reset the entire system ---
+                resetAllVideos();
+                activeVideo = video; // Set the new active video reference
+
+                // --- Step 2: Configure the active card ---
+                card.classList.add('active');
+
+                // Set the correct type for webOS system inputs
+                const sourceType = sourceUrl === 'tv://' ? 'service/webos-broadcast' : 'service/webos-external';
+                video.type = sourceType;
+
+                // Set the new source and reload
+                video.src = sourceUrl;
+                video.load(); 
+
+                // --- Step 3: Attempt to play (This attempts to acquire the single webOS resource) ---
+                video.play()
+                    .then(() => {
+                        console.log(`Successfully started: ${inputName}`);
+                        
+                        // Set the video to unmute and hide overlay on success
+                        video.muted = false; 
+                        overlay.style.display = 'none';
+
+                        // Update status text and indicators
+                        stateSpan.textContent = 'Active (Unmuted)';
+                        stateSpan.classList.remove('state-muted');
+                        stateSpan.classList.add('state-unmuted');
+                        indicator.style.display = 'block';
+
+                    })
+                    .catch(error => {
+                        console.error(`Error playing ${inputName}. Source may be inactive/blocked:`, error);
+                        
+                        // If it fails, keep the card active visually, but show the error state
+                        stateSpan.textContent = 'ERROR/No Signal';
+                        stateSpan.classList.remove('state-unmuted');
+                        stateSpan.classList.add('state-muted');
+                        overlay.style.display = 'flex';
+                        overlay.textContent = "SIGNAL ERROR";
+                    });
+            }
+
+            // Attach click listener to each card
+            videoCards.forEach(card => {
+                card.addEventListener('click', () => {
+                    activateInput(card);
+                });
+            });
+
+            // Initial setup: activate the first card to start
+            if (videoCards.length > 0) {
+                 // Initial click on HDMI 1
+                videoCards[0].click(); 
+            }
+        });
+    </script>
+</body>
+</html>
+
+
