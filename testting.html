@@ -1,22 +1,36 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>webos broadcast test</title>
+    <title>webos broadcast test</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+    <style>
+        /* 2. CORRECTED: Proper CSS syntax targeting the body */
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        video {
+            display: block; /* Makes videos stack nicely */
+            margin-bottom: 20px;
+        }
+    </style>
 </head>
 <body>
- <meta name='viewport' content='width=device-width, initial-scale=1'/>
-broadcast tv cable  1
-<video autoplay style="width:50%;height:50%">
-  <source type="service/webos-broadcast" src="tv://cable:1"></source>
-</video>internal hdmi 2
-<video autoplay style="width:50%;height:50%">
-  <source type="service/webos-internal" src="ext://hdmi:2"></source>
-</video>external cable 1
-<video autoplay style="width:50%;height:50%">
-  <source type="service/webos-external" src="tv://cable:1"></source>
-</video><style>font
-font-family: Arial;</style>
+
+    <p>broadcast tv cable 1</p>
+    <video autoplay style="width:50%;height:50%">
+        <source type="service/webos-broadcast" src="tv://cable:1">
+    </video>
+
+    <p>internal hdmi 2</p>
+    <video autoplay style="width:50%;height:50%">
+        <source type="service/webos-internal" src="ext://hdmi:2">
+    </video>
+
+    <p>external cable 1</p>
+    <video autoplay style="width:50%;height:50%">
+        <source type="service/webos-external" src="tv://cable:1">
+    </video>
+
 </body>
 </html>
-
-
