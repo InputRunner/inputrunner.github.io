@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebOS Multi-Source Console</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* CSS optimized for full-screen TV view */
+        body {
+            /* Minimal padding for full screen */
+            padding: 0.5rem;
+            overflow: hidden; /* Prevent scrolling */
+        }
+
+        /* Define a 16:9 aspect ratio container for the video elements */
+        .video-container {
+            width: 100%;
+            padding-top: 56.25%; /* 16:9 Aspect Ratio (9/16 * 100) */
+            position: relative;
+        }
+
+        /* Video element must fill its container */
+        .video-element {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            /* Using slight rounding for aesthetics, but minimizing visual noise */
+            border-radius: 0.25rem;
+            background-color: #000;
+        }
+
+        /* Overlay for "No Signal" message */
+        .signal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            color: #ff3838; /* Brighter red for visibility on TV */
+            display: none;
+            justify-content: center;
+            align-items: center;
+            font-size: 2rem; /* Larger font for TV */
+            font-weight: 800; /* Extra bold */
+            border-radius: 0.25rem;
+            z-index: 10;
+        }
+
+        /* Indicator for which video is currently unmuted */
+        .unmuted-indicator {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            background-color: #22c55e; /* Green for ON */
+            display: none;
+            z-index: 20;
+            box-shadow: 0 0 10px #22c55e;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen font-sans">
+
+    <!--
+    Main Grid Layout for 8 Sources (4x2 on large screens)
+    gap-2 is used for minimal spacing, keeping elements close together.
+    -->
+    <div class="h-screen w-screen grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+
+        <!-- All video cards use data-key attribute for JS mapping -->
+
+        <!-- 1. HDMI 1 -->
+        <div class="p-2 bg-gray-800 rounded-sm relative" data-key="1">
+            <h2 class="text-sm font-semibold mb-1 text-white flex justify-between items-center">
+                <span>[1] HDMI 1</span> <span id="key-1-state" class="text-xs text-red-400">MUTED</span>
+            </h2>
+            <div class="video-container">
+                <video id="video-1" class="video-element" autoplay muted></video>
+                <div id="overlay-1" class="signal-overlay">NO SIGNAL</div>
+                <div id="indicator-1" class="unmuted-indicator"></div>
+            </div>
+            <p class="text-xs text-gray-400 mt-1">Source: ext://hdmi:1</p>
+        </div>
+
+        <!-- 2. HDMI 2 -->
+        <div class="p-2 bg-gray-800 rounded-sm relative" data-key="2">
+            <h2 class="text-sm font-semibold mb-1 text-white flex justify-between items-center">
+                <span>[2] HDMI 2</span> <span id="key-2-state" class="text-xs text-red-400">MUTED</span>
+            </h2>
+            <div class="video-container">
+                <video id="video-2" class="video-element" autoplay muted></video>
+                <div id="overlay-2" class="signal-overlay">NO SIGNAL</div>
+                <div id="indicator-2" class="unmuted-indicator"></div>
+            </div>
+            <p class="text-xs text-gray-400 mt-1">Source: ext://hdmi:2</p>
+        </div>
+
+        <!-- 3. HDMI 3 -->
+        <div class="p-2 bg-gray-800 rounded-sm relative" data-key="3">
+            <h2 class="text-sm font-semibold mb-1 text-white flex justify-between items-center">
+                <span>[3] HDMI 3</span> <span id="key-3-state" class="text-xs text-red-400">MUTED</span>
+            </h2>
+            <div class="video-container">
+                <video id="video-3" class="video-element" autoplay muted></video>
+                <div id="overlay-3" class="signal-overlay">NO SIGNAL</div>
+                <div id="indicator-3" class="unmuted-indicator"></div>
+            </div>
+            <p class="text-xs text-gray-400 mt-1">Source: ext://hdmi:3</p>
+        </div>
+
+        <!-- 4. HDMI 4 -->
+        <div class="p-2 bg-gray-800 rounded-sm relative" data-key="4">
+            <h2 class="text-sm font-semibold mb-1 text-white flex justify-between items-center">
+                <span>[4] HDMI 4</span> <span id="key-4-state" class="text-xs text-red-400">MUTED</span>
+            </h2>
+            <div class="video-container">
+                <video id="video-4" class="video-element" autoplay muted></video>
+                <div id="overlay-4" class="signal-overlay">NO SIGNAL</div>
+                <div id="indicator-4" class="unmuted-indicator"></div>
+            </div>
+            <p class="text-xs text-gray-400 mt-1">Source: ext://hdmi:4</p>
+        </div>
+
+        <!-- 5. Component 1 -->
+        <div class="p-2 bg-gray-800 rounded-sm relative" data-key="5">
+            <h2 class="text-sm font-semibold mb-1 text-white flex justify-between items-center">
+                <span>[5] Component 1</span> <span id="key-5-state" class="text-xs text-red-400">MUTED</span>
+            </h2>
+            <div class="video-container">
+                <video id="video-5" class="video-element" autoplay muted></video>
+                <div id="overlay-5" class="signal-overlay">NO SIGNAL</div>
+                <div id="indicator-5" class="unmuted-indicator"></div>
+            </div>
+            <p class="text-xs text-gray-400 mt-1">Source: ext://comp:1</p>
+        </div>
+
+        <!-- 6. AV 1 (Composite) -->
+        <div class="p-2 bg-gray-800 rounded-sm relative" data-key="6">
+            <h2 class="text-sm font-semibold mb-1 text-white flex justify-between items-center">
+                <span>[6] AV 1</span> <span id="key-6-state" class="text-xs text-red-400">MUTED</span>
+            </h2>
+            <div class="video-container">
+                <video id="video-6" class="video-element" autoplay muted></video>
+                <div id="overlay-6" class="signal-overlay">NO SIGNAL</div>
+                <div id="indicator-6" class="unmuted-indicator"></div>
+            </div>
+            <p class="text-xs text-gray-400 mt-1">Source: ext://av:1</p>
+        </div>
+
+        <!-- 7. AV 2 (Composite) -->
+        <div class="p-2 bg-gray-800 rounded-sm relative" data-key="7">
+            <h2 class="text-sm font-semibold mb-1 text-white flex justify-between items-center">
+                <span>[7] AV 2</span> <span id="key-7-state" class="text-xs text-red-400">MUTED</span>
+            </h2>
+            <div class="video-container">
+                <video id="video-7" class="video-element" autoplay muted></video>
+                <div id="overlay-7" class="signal-overlay">NO SIGNAL</div>
+                <div id="indicator-7" class="unmuted-indicator"></div>
+            </div>
+            <p class="text-xs text-gray-400 mt-1">Source: ext://av:2</p>
+        </div>
+
+        <!-- 8. Broadcast TV -->
+        <div class="p-2 bg-blue-900 rounded-sm relative" data-key="8">
+            <h2 class="text-sm font-semibold mb-1 text-white flex justify-between items-center">
+                <span>[8] Broadcast TV</span> <span id="key-8-state" class="text-xs text-red-400">MUTED</span>
+            </h2>
+            <div class="video-container">
+                <video id="video-8" class="video-element" autoplay muted></video>
+                <div id="overlay-8" class="signal-overlay">NO SIGNAL</div>
+                <div id="indicator-8" class="unmuted-indicator"></div>
+            </div>
+            <p class="text-xs text-gray-400 mt-1">Source: tv://cable:1</p>
+        </div>
+
+    </div>
+
+    <!-- Hidden element to hold the source data -->
+    <div id="source-data" style="display: none;">
+        <source data-id="1" type="service/webos-external" src="ext://hdmi:1">
+        <source data-id="2" type="service/webos-external" src="ext://hdmi:2">
+        <source data-id="3" type="service/webos-external" src="ext://hdmi:3">
+        <source data-id="4" type="service/webos-external" src="ext://hdmi:4">
+        <source data-id="5" type="service/webos-external" src="ext://comp:1">
+        <source data-id="6" type="service/webos-external" src="ext://av:1">
+        <source data-id="7" type="service/webos-external" src="ext://av:2">
+        <source data-id="8" type="service/webos-broadcast" src="tv://cable:1">
+    </div>
+
+    <script>
+        // Define the time to wait before assuming 'No Signal' (in milliseconds)
+        const SIGNAL_TIMEOUT_MS = 1500;
+        const NUM_SOURCES = 8;
+        const videoElements = {};
+        const overlayElements = {};
+        const stateElements = {};
+        const indicatorElements = {};
+
+        // --- Initialization and Source Loading ---
+
+        window.onload = function() {
+            // Load sources into video elements
+            const sources = document.querySelectorAll('#source-data source');
+            sources.forEach(source => {
+                const id = source.dataset.id;
+                const video = document.getElementById(`video-${id}`);
+                
+                if (video) {
+                    // Create the actual <source> tag inside the video element
+                    const sourceTag = document.createElement('source');
+                    sourceTag.setAttribute('type', source.getAttribute('type'));
+                    sourceTag.setAttribute('src', source.getAttribute('src'));
+                    video.appendChild(sourceTag);
+
+                    // Map all relevant elements
+                    videoElements[id] = video;
+                    overlayElements[id] = document.getElementById(`overlay-${id}`);
+                    stateElements[id] = document.getElementById(`key-${id}-state`);
+                    indicatorElements[id] = document.getElementById(`indicator-${id}`);
+
+                    // Setup signal detection for the newly populated video
+                    setupSignalDetection(id);
+                }
+            });
+
+            // Set up keyboard control listener
+            document.addEventListener('keydown', handleKeyToggle);
+        };
+
+        // --- Signal Detection Logic ---
+
+        function setupSignalDetection(id) {
+            const video = videoElements[id];
+            const overlay = overlayElements[id];
+
+            let timeout = setTimeout(() => {
+                if (video.paused || video.ended || video.readyState < 3) {
+                    overlay.style.display = 'flex';
+                }
+            }, SIGNAL_TIMEOUT_MS);
+
+            // Function to handle signal loss/end
+            const checkSignal = () => {
+                clearTimeout(timeout);
+                if (video.paused || video.ended || video.readyState < 3) {
+                     overlay.style.display = 'flex';
+                }
+            };
+
+            // Remove overlay when video successfully plays
+            video.addEventListener('playing', () => {
+                clearTimeout(timeout);
+                overlay.style.display = 'none';
+            });
+            
+            // Re-check/re-show signal on playback failure events
+            video.addEventListener('ended', checkSignal);
+            video.addEventListener('error', checkSignal);
+            video.addEventListener('pause', checkSignal);
+        }
+
+        // --- Keyboard Control Logic ---
+
+        function handleKeyToggle(event) {
+            // Get the key pressed (e.g., '1', '2', '8')
+            const key = event.key;
+            
+            // Check if the key is a number between 1 and 8
+            if (key >= '1' && key <= NUM_SOURCES.toString()) {
+                const id = key;
+                toggleAudio(id);
+            }
+        }
+
+        function toggleAudio(idToToggle) {
+            // Loop through all videos to ensure only ONE is unmuted at a time (like a selector switch)
+            for (let i = 1; i <= NUM_SOURCES; i++) {
+                const id = i.toString();
+                const video = videoElements[id];
+                const stateText = stateElements[id];
+                const indicator = indicatorElements[id];
+
+                if (!video) continue;
+
+                if (id === idToToggle) {
+                    // This is the selected video. Toggle its mute state.
+                    video.muted = !video.muted;
+                } else {
+                    // Mute all other videos
+                    video.muted = true;
+                }
+
+                // Update UI state
+                if (video.muted) {
+                    stateText.textContent = 'MUTED';
+                    stateText.classList.remove('text-green-400');
+                    stateText.classList.add('text-red-400');
+                    indicator.style.display = 'none';
+                } else {
+                    stateText.textContent = 'UNMUTED';
+                    stateText.classList.remove('text-red-400');
+                    stateText.classList.add('text-green-400');
+                    indicator.style.display = 'block';
+                }
+            }
+        }
+    </script>
+</body>
+</html>
+
