@@ -160,7 +160,6 @@ function SettingsModal({ onClose, scannedChannels, onScan, channels, setChannels
 // --- Input Player Modal ---
 function InputPlayerModal({ source, onClose }) {
   const [playerSize, setPlayerSize] = useState(1);
-
   useEffect(() => {
     function handleKey(e) {
       if (
@@ -187,12 +186,10 @@ function InputPlayerModal({ source, onClose }) {
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
   }, [onClose]);
-
   let width, height;
   if (playerSize === 1) { width = "52vw"; height = "52vh";}
   else if (playerSize === 2) { width = "80vw"; height = "72vh";}
   else { width = "97vw"; height = "86vh"; }
-
   return html`
     <div class="hdmi-player-modal" tabIndex="0">
       <div class="hdmi-player-header">${source.name}</div>
@@ -210,7 +207,6 @@ function InputPlayerModal({ source, onClose }) {
   `;
 }
 
-// The input sources data will come from a window.INPUT_SOURCES array, injected in index.html
 function SourceCard({ source, selected, onClick }) {
   let num = "", label = "", extraClass = "";
   if (source.type === "hdmi") { num = (parseInt(source.key.replace(/\D/g,""))).toString(); label = "HDMI";}
@@ -234,17 +230,12 @@ function App() {
   const [playingIdx, setPlayingIdx] = useState(null);
   const [scannedChannels, setScannedChannels] = useState([]);
   const [channels, setChannels] = useState([]);
-
   function scanChannels() {
     setTimeout(() => {
       setScannedChannels(FAKE_CHANNELS);
       setChannels(FAKE_CHANNELS.map(ch => ({...ch})));
     }, 600);
   }
-
-  // INPUT_SOURCES from window (set by index.html)
-  const INPUT_SOURCES = window.INPUT_SOURCES || [];
-
   useEffect(() => {
     function onKeyDown(e) {
       if (playingIdx!==null || showSettings) return;
@@ -264,8 +255,19 @@ function App() {
     }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [selectedIdx, playingIdx, showSettings, INPUT_SOURCES.length]);
-
+  }, [selectedIdx, playingIdx, showSettings]);
+  const INPUT_SOURCES = [
+    {type:"hdmi",key:"hdmi1",name:"HDMI 1",videoSrc:"ext://hdmi:1"},
+    {type:"hdmi",key:"hdmi2",name:"HDMI 2",videoSrc:"ext://hdmi:2"},
+    {type:"hdmi",key:"hdmi3",name:"HDMI 3",videoSrc:"ext://hdmi:3"},
+    {type:"hdmi",key:"hdmi4",name:"HDMI 4",videoSrc:"ext://hdmi:4"},
+    {type:"av",key:"av1",name:"AV 1",videoSrc:"ext://av:1"},
+    {type:"av",key:"av2",name:"AV 2",videoSrc:"ext://av:2"},
+    {type:"comp",key:"comp1",name:"Component 1",videoSrc:"ext://comp:1"},
+    {type:"scart",key:"scart1",name:"SCART 1",videoSrc:"ext://scart:1"},
+    {type:"livetv",key:"livetv1",name:"Live TV 1",videoSrc:"atv://cable:1/dvb/1"},
+    {type:"livetv",key:"livetv2",name:"Live TV 2",videoSrc:"atv://cable:2/dvb/2"}
+  ];
   return html`
     <div>
       <div id="top-bar">
